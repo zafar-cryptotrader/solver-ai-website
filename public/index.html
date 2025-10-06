@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solver.AI - IIT JEE Doubt Solver</title>
+    <!-- Minimalist Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- MathJax Configuration -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <style>
+        /* --- PRODUCTION NOTES FOR CSS ---
+         * In a real production environment, this CSS would be moved to its own file (e.g., 'style.css'),
+         * minified, and linked via a <link> tag. This improves caching and organization.
+        */
+        :root {
+            /* Minimalist Black/Grey/White Palette */
+            --bg-deep-dark: #0a0a0a; /* Almost black for main background */
+            --bg-dark: #1a1a1a;     /* Dark grey for containers */
+            --bg-medium: #2c2c2c;   /* Medium grey for messages/inputs */
+            --bg-light-hover: #3a3a3a; /* Lighter grey for hover */
+            --text-primary: #e0e0e0;  /* Light grey/off-white for main text */
+            --text-secondary: #aaaaaa; /* Dimmer grey for secondary text */
+            --border-color: #3a3a3a;  /* Subtle borders */
+            --accent: #ffffff;         /* White for accents/logo */
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-deep-dark);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /*
+         * PERFORMANCE NOTE: The particle canvas background has been disabled for production.
+         * Animated backgrounds can be resource-intensive and negatively impact performance,
+         * especially on mobile or low-power devices. A static background is more efficient.
+         * To re-enable, uncomment the '#particles-canvas' selector and the canvas element in the HTML body.
+        */
+        /*
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.3;
+        }
+        */
+
+        .container {
+            position: relative;
+            width: 95%;
+            height: 95%;
+            max-width: 1600px;
+            max-height: 1000px;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-dark);
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 2rem;
+            color: var(--accent);
+            margin: 0;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .chat-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        #chatbox {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            background: var(--bg-deep-dark);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Custom Scrollbar */
+        #chatbox::-webkit-scrollbar { width: 8px; }
+        #chatbox::-webkit-scrollbar-track { background: var(--bg-dark); border-radius: 4px; }
+        #chatbox::-webkit-scrollbar-thumb { background-color: var(--bg-medium); border-radius: 4px; border: 2px solid var(--bg-dark); }
+        #chatbox::-webkit-scrollbar-thumb:hover { background-color: var(--bg-light-hover); }
+
+        .message {
+            margin: 0.8rem 0;
+            padding: 0.8rem 1.2rem;
+            border-radius: 12px;
+            max-width: 85%;
+            line-height: 1.6;
+            animation: messageAppear 0.3s ease-out;
+            word-wrap: break-word;
+            border: 1px solid transparent;
+            clear: both;
+            float: left;
+        }
+
+        .user {
+            background: var(--bg-medium);
+            float: right;
+            border-color: var(--border-color);
+        }
+
+        .bot {
+            background: var(--bg-dark);
+            float: left;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Clearfix for message container */
+        #chatbox::after { content: ""; display: table; clear: both; }
+
+        .message-content { font-size: 0.95rem; }
+
+        .message-content img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin-top: 8px;
+            display: block;
+            cursor: pointer;
+        }
+
+        .message-content br { content: ""; display: block; margin: 8px 0; }
+
+        .code-block {
+            background: var(--bg-deep-dark);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .message-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.8rem; color: var(--text-secondary); }
+        .message-header i { color: var(--text-secondary); }
+        .sender-name { font-weight: 500; color: var(--text-primary); }
+        .message-time { font-size: 0.75rem; opacity: 0.8; margin-left: auto; }
+        .input-area { flex-shrink: 0; padding-top: 0.5rem; }
+
+        #image-preview-container {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 0.5rem;
+            padding: 8px;
+            background-color: var(--bg-medium);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        #image-preview { max-height: 40px; max-width: 60px; border-radius: 4px; display: block; }
+        #image-filename { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
+        #clear-image-btn { background: none; border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer; padding: 5px; line-height: 1; }
+        #clear-image-btn:hover { color: var(--text-primary); background: var(--bg-light-hover); border-radius: 50%; }
+
+        .input-controls { display: flex; gap: 0.8rem; align-items: center; }
+
+        #input {
+            flex-grow: 1;
+            padding: 0.8rem 1.2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: var(--bg-medium);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #input:focus { outline: none; border-color: var(--text-secondary); box-shadow: 0 0 8px rgba(224, 224, 224, 0.1); }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: var(--bg-medium);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        button:hover { background: var(--bg-light-hover); transform: translateY(-1px); }
+        button:active { transform: translateY(0px); }
+        button i { font-size: 1em; }
+
+        @keyframes messageAppear {
+            from { transform: scale(0.98) translateY(5px); opacity: 0.5; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .typing-indicator { display: none; padding: 0.5rem 1rem; margin-bottom: 0.5rem; }
+        .typing-dot { display: inline-block; width: 7px; height: 7px; margin-right: 4px; background: var(--text-secondary); border-radius: 50%; animation: typing 1.4s infinite ease-in-out; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dot:nth-child(3) { animation-delay: 0s; }
+
+        /* MathJax specific styling */
+        .MathJax { color: var(--text-primary) !important; font-size: 1.05em !important; }
+        mjx-container[jax="SVG"] > svg { vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <!-- PERFORMANCE NOTE: The canvas element is commented out to improve performance. -->
+    <!-- <canvas id="particles-canvas"></canvas> -->
+
+    <div class="container">
+        <div class="header">
+            <h1 class="logo">Solver.AI</h1>
+            <p>IIT JEE Doubt Solver</p>
+        </div>
+
+        <div class="chat-container">
+            <!-- ACCESSIBILITY NOTE: role="log" and aria-live="polite" help screen readers announce new messages. -->
+            <div id="chatbox" role="log" aria-live="polite">
+                <!-- Messages will be appended here -->
+            </div>
+
+            <!-- Typing Indicator -->
+            <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                 <!-- Image Preview Area -->
+                 <div id="image-preview-container">
+                     <img id="image-preview" src="#" alt="Image Preview"/>
+                     <span id="image-filename"></span>
+                     <!-- ACCESSIBILITY NOTE: aria-label provides context for this icon-only button. -->
+                     <button id="clear-image-btn" onclick="clearImagePreview()" title="Remove Image" aria-label="Remove Image">×</button>
+                 </div>
+                 <!-- Input Controls -->
+                <div class="input-controls">
+                    <!-- ACCESSIBILITY NOTE: aria-label describes the input field for screen readers. -->
+                    <input type="text" id="input" placeholder="Ask your doubt (text or with image)..." onkeypress="handleKeyPress(event)" aria-label="Chat input field">
+                    <button onclick="triggerImageUpload()" title="Upload Image" aria-label="Upload Image">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <!-- Hidden file input -->
+                    <input type="file" id="imageUpload" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+                    <button onclick="sendMessage()" title="Send Message" aria-label="Send Message">
+                        <i class="fas fa-paper-plane"></i> Solve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <script>
+        // --- PRODUCTION NOTES FOR JAVASCRIPT ---
+        // In a real production environment, this script would be moved to its own file (e.g., 'app.js'),
+        // likely bundled and minified to reduce file size and improve loading times.
+
+        // --- (Disabled) Particle Background Code ---
+        // This code is left here but commented out. It can be re-enabled for non-production environments if desired.
+        /*
+        class Particle {
+            constructor(canvas, ctx) { this.canvas = canvas; this.ctx = ctx; this.reset(); }
+            reset() { this.x = Math.random()*this.canvas.width; this.y = Math.random()*this.canvas.height; this.radius = Math.random()*1.5+0.5; this.color = `rgba(200, 200, 200, ${Math.random()*0.3+0.05})`; this.velocity = {x:(Math.random() - 0.5)*0.1, y:(Math.random() - 0.5)*0.1}; this.alpha = Math.random()*0.5+0.1; }
+            update() { this.x += this.velocity.x; this.y += this.velocity.y; if(this.x<-this.radius||this.x>this.canvas.width+this.radius||this.y<-this.radius||this.y>this.canvas.height+this.radius) { this.reset(); } }
+            draw() { this.ctx.save(); this.ctx.globalAlpha = this.alpha; this.ctx.beginPath(); this.ctx.arc(this.x,this.y,this.radius,0,Math.PI*2); this.ctx.fillStyle = this.color; this.ctx.fill(); this.ctx.restore(); }
+        }
+        let particles = [];
+        function initParticles() { const canvas = document.getElementById('particles-canvas'); if (!canvas) return; const ctx = canvas.getContext('2d'); canvas.width = window.innerWidth; canvas.height = window.innerHeight; particles = Array.from({length:70},() => new Particle(canvas,ctx)); window.addEventListener('resize',()=>{ if(!canvas) return; canvas.width=window.innerWidth; canvas.height=window.innerHeight; }); animateParticles(ctx); }
+        function animateParticles(ctx) { if (!ctx || !ctx.canvas) return; ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(() => animateParticles(ctx)); }
+        */
+        // --- End Particle Code ---
+
+
+        // --- Chat Logic ---
+
+        // =================================================================================
+        // !! CRITICAL SECURITY CHANGE !!
+        // The API Key has been REMOVED from the client-side code.
+        // Exposing an API key in the browser is a major security risk.
+        // You MUST create a backend (server-side) application that will:
+        // 1. Securely store your API key as an environment variable.
+        // 2. Receive requests from this frontend application.
+        // 3. Make the actual call to the Google Generative Language API.
+        // 4. Return the response to this frontend.
+        //
+        // This frontend now sends requests to a local endpoint '/api/solve'.
+        // You need to build this endpoint on your server.
+        // =================================================================================
+        const API_ENDPOINT = '/api/solve'; // This is your new backend endpoint.
+
+        const chatbox = document.getElementById('chatbox');
+        const input = document.getElementById('input');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const imageFilename = document.getElementById('image-filename');
+        const typingIndicator = document.querySelector('.typing-indicator');
+
+        let currentImageBase64 = null;
+        let currentImageMimeType = null;
+
+        function formatBotResponse(text) {
+            let escapedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            escapedText = escapedText.replace(/```(\w*?)\n([\s\S]*?)\n```/g, (match, lang, code) => {
+                const escapedCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                return `<div class="code-block">${escapedCode}</div>`;
+            });
+            escapedText = escapedText.replace(/```([\s\S]*?)```/g, (match, code) => {
+                const escapedCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                return `<div class="code-block">${escapedCode}</div>`;
+            });
+            escapedText = escapedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            escapedText = escapedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            escapedText = escapedText.replace(/\n/g, '<br>');
+            return escapedText;
+        }
+
+        function triggerImageUpload() {
+            document.getElementById('imageUpload').click();
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload a valid image file.');
+                clearImagePreview();
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentImageBase64 = e.target.result;
+                currentImageMimeType = file.type;
+                imagePreview.src = currentImageBase64;
+                imageFilename.textContent = file.name.length > 30 ? file.name.substring(0, 27) + '...' : file.name;
+                imagePreviewContainer.style.display = 'flex';
+            }
+            reader.onerror = function(error) {
+                 console.error("FileReader error:", error);
+                 addMessage("Error: Failed to read the image file.", 'bot');
+                 clearImagePreview();
+            }
+            reader.readAsDataURL(file);
+            event.target.value = null;
+        }
+
+        function clearImagePreview() {
+            currentImageBase64 = null;
+            currentImageMimeType = null;
+            imagePreview.src = '#';
+            imageFilename.textContent = '';
+            imagePreviewContainer.style.display = 'none';
+            document.getElementById('imageUpload').value = null;
+        }
+
+        async function sendMessage() {
+            const messageText = input.value.trim();
+            if (!messageText && !currentImageBase64) return;
+
+            addMessage(messageText, 'user', currentImageBase64);
+
+            let parts = [];
+            if (currentImageBase64) {
+                 const base64Data = currentImageBase64.split(',')[1];
+                 if (base64Data && currentImageMimeType) {
+                     parts.push({
+                         inline_data: { mime_type: currentImageMimeType, data: base64Data }
+                     });
+                 } else {
+                      console.error("Error preparing image data for API.");
+                      addMessage("Error: Could not process the uploaded image.", 'bot');
+                      clearImagePreview();
+                      return;
+                 }
+            }
+            if (messageText) {
+                let promptText = messageText;
+                if(parts.length > 0) {
+                    promptText = "Solve the problem shown in the image. Question text: " + messageText;
+                }
+                // The detailed "step-by-step" prompt is best handled by the backend
+                // to allow for easier tuning without changing frontend code.
+                parts.push({ text: promptText });
+            }
+
+            input.value = '';
+            clearImagePreview();
+
+            typingIndicator.style.display = 'block';
+            scrollToBottom();
+
+            try {
+                // This 'fetch' now goes to YOUR backend, not directly to Google.
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts }] })
+                });
+
+                if (!response.ok) {
+                    // UX IMPROVEMENT: Provide a user-facing error message.
+                    const errorText = await response.text();
+                    throw new Error(`The server responded with an error (${response.status}). Please try again later. Details: ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                 let botResponse;
+                 if (data.error) {
+                    botResponse = `Error from AI service: ${data.error}`;
+                 } else if (data.text) {
+                    botResponse = data.text;
+                 } else {
+                    botResponse = "Received an unexpected response from the server.";
+                 }
+
+                addMessage(botResponse, 'bot');
+
+            } catch (error) {
+                console.error('Error fetching from backend:', error);
+                // UX IMPROVEMENT: Display the error in the chat window.
+                addMessage(`Sorry, something went wrong. Could not connect to the server. Please check your connection and try again.`, 'bot');
+            } finally {
+                typingIndicator.style.display = 'none';
+            }
+        }
+
+        function addMessage(text, sender, imageBase64 = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            let imageHTML = '';
+            if (imageBase64 && sender === 'user') {
+                imageHTML = `<img src="${imageBase64}" alt="User Uploaded Image">`;
+            }
+
+            // Basic HTML escaping for user text to prevent XSS.
+            const userSanitizedText = text ? text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>') : '';
+            const formattedText = sender === 'bot' ? formatBotResponse(text) : userSanitizedText;
+
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <i class="fas ${sender === 'bot' ? 'fa-robot' : 'fa-user'}"></i>
+                    <span class="sender-name">${sender === 'bot' ? 'Solver.AI' : 'You'}</span>
+                    <span class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div class="message-content">
+                    ${imageHTML}
+                    <div class="message-text-content">${formattedText}</div>
+                </div>
+            `;
+            chatbox.appendChild(messageDiv);
+
+            if (sender === 'bot') {
+                 setTimeout(() => {
+                    try {
+                         const contentToTypeset = messageDiv.querySelector('.message-text-content');
+                         if (contentToTypeset) {
+                             MathJax.typesetPromise([contentToTypeset]).catch((err) => console.error('MathJax Typesetting Error:', err));
+                         }
+                    } catch (e) {
+                         console.error("Error queueing MathJax:", e);
+                    }
+                 }, 50);
+            }
+
+             scrollToBottom();
+        }
+
+        function scrollToBottom() {
+             requestAnimationFrame(() => {
+                 chatbox.scrollTop = chatbox.scrollHeight;
+             });
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // PERFORMANCE NOTE: Call to initParticles() is removed.
+            // initParticles();
+            addMessage("Hello! I'm Solver.AI. Ask your IIT JEE doubts (Physics, Chemistry, Math). You can type your question or upload an image.", 'bot');
+        });
+    </script>
+</body>
+</html>
