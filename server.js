@@ -30,7 +30,7 @@ app.post('/api/solve', async (req, res) => {
   try {
     // Construct the correct Google Gemini API URL
     // Using a powerful model like gemini-1.5-pro is recommended for multi-modal inputs
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`;
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
     // Get the 'contents' payload sent from the frontend
     const { contents } = req.body;
