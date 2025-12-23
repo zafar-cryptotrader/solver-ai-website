@@ -2,548 +2,653 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solver.AI - IIT JEE Doubt Solver</title>
-    <!-- Minimalist Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Solver.AI</title>
+    
+    <!-- Professional Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- MathJax Configuration -->
     <script>
         MathJax = {
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
+            tex: { 
+                inlineMath: [['$', '$'], ['\\(', '\\)']], 
                 displayMath: [['$$', '$$'], ['\\[', '\\]']],
                 processEscapes: true
             },
-            svg: {
-                fontCache: 'global'
-            },
-            options: {
-                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
-                ignoreHtmlClass: 'tex2jax_ignore',
-                processHtmlClass: 'tex2jax_process'
+            svg: { fontCache: 'global' },
+            startup: {
+                pageReady: () => {
+                    return MathJax.startup.defaultPageReady();
+                }
             }
         };
     </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
     <style>
-        /* --- PRODUCTION NOTES FOR CSS ---
-         * In a real production environment, this CSS would be moved to its own file (e.g., 'style.css'),
-         * minified, and linked via a <link> tag. This improves caching and organization.
-        */
+        /* --- PROFESSIONAL THEME --- */
         :root {
-            /* Minimalist Black/Grey/White Palette */
-            --bg-deep-dark: #0a0a0a; /* Almost black for main background */
-            --bg-dark: #1a1a1a;     /* Dark grey for containers */
-            --bg-medium: #2c2c2c;   /* Medium grey for messages/inputs */
-            --bg-light-hover: #3a3a3a; /* Lighter grey for hover */
-            --text-primary: #e0e0e0;  /* Light grey/off-white for main text */
-            --text-secondary: #aaaaaa; /* Dimmer grey for secondary text */
-            --border-color: #3a3a3a;  /* Subtle borders */
-            --accent: #ffffff;         /* White for accents/logo */
+            /* Backgrounds: Deep Slate */
+            --bg-app: #0f172a;       /* Slate 900 */
+            --bg-panel: #1e293b;     /* Slate 800 */
+            
+            /* Accents: "Intellectual Blue" */
+            --primary: #3b82f6;      /* Blue 500 */
+            --primary-dim: #1d4ed8;  /* Blue 700 */
+            --secondary: #06b6d4;    /* Cyan 500 */
+            
+            /* Gradients */
+            --gradient-main: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+            --gradient-glow: radial-gradient(circle at top center, rgba(56, 189, 248, 0.15), transparent 70%);
+
+            /* Glassmorphism */
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(148, 163, 184, 0.1);
+            
+            /* Text */
+            --text-main: #f1f5f9;    /* Slate 100 */
+            --text-muted: #94a3b8;   /* Slate 400 */
+            
+            --font-main: 'Inter', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+            --max-width: 850px;
         }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
 
         body {
             margin: 0;
-            background: var(--bg-deep-dark);
-            font-family: 'Inter', sans-serif;
-            color: var(--text-primary);
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-        }
-
-        /*
-         * PERFORMANCE NOTE: The particle canvas background has been disabled for production.
-         * Animated backgrounds can be resource-intensive and negatively impact performance,
-         * especially on mobile or low-power devices. A static background is more efficient.
-         * To re-enable, uncomment the '#particles-canvas' selector and the canvas element in the HTML body.
-        */
-        /*
-        #particles-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0.3;
-        }
-        */
-
-        .container {
-            position: relative;
-            width: 95%;
-            height: 95%;
-            max-width: 1600px;
-            max-height: 1000px;
-            z-index: 1;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-dark);
-            border-radius: 15px;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border-color);
-            padding: 1.5rem;
-            box-sizing: border-box;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 1rem;
-            flex-shrink: 0;
-        }
-
-        .logo {
-            font-family: 'Inter', sans-serif;
-            font-weight: 700;
-            font-size: 2rem;
-            color: var(--accent);
-            margin: 0;
-        }
-
-        .header p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-top: 0.25rem;
-        }
-
-        .chat-container {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
             padding: 0;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
 
-        #chatbox {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 8px;
-            background: var(--bg-deep-dark);
-            border: 1px solid var(--border-color);
+        /* --- BACKGROUND AMBIENCE --- */
+        .background-glow {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--gradient-glow);
+            z-index: -1;
+            pointer-events: none;
         }
 
-        /* Custom Scrollbar */
-        #chatbox::-webkit-scrollbar { width: 8px; }
-        #chatbox::-webkit-scrollbar-track { background: var(--bg-dark); border-radius: 4px; }
-        #chatbox::-webkit-scrollbar-thumb { background-color: var(--bg-medium); border-radius: 4px; border: 2px solid var(--bg-dark); }
-        #chatbox::-webkit-scrollbar-thumb:hover { background-color: var(--bg-light-hover); }
-
-        .message {
-            margin: 0.8rem 0;
-            padding: 0.8rem 1.2rem;
-            border-radius: 12px;
-            max-width: 85%;
-            line-height: 1.6;
-            animation: messageAppear 0.3s ease-out;
-            word-wrap: break-word;
-            border: 1px solid transparent;
-            clear: both;
-            float: left;
+        /* --- HEADER --- */
+        .app-header {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 50;
         }
 
-        .user {
-            background: var(--bg-medium);
-            float: right;
-            border-color: var(--border-color);
-        }
-
-        .bot {
-            background: var(--bg-dark);
-            float: left;
-            border: 1px solid var(--border-color);
-        }
-
-        /* Clearfix for message container */
-        #chatbox::after { content: ""; display: table; clear: both; }
-
-        .message-content { font-size: 0.95rem; }
-
-        .message-content img {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 8px;
-            margin-top: 8px;
-            display: block;
-            cursor: pointer;
-        }
-
-        .message-content br { content: ""; display: block; margin: 8px 0; }
-
-        .code-block {
-            background: var(--bg-deep-dark);
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin: 10px 0;
-            font-family: 'Courier New', Courier, monospace;
-            white-space: pre-wrap;
-            font-size: 0.9rem;
-            border: 1px solid var(--border-color);
-            overflow-x: auto;
-        }
-
-        .message-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.8rem; color: var(--text-secondary); }
-        .message-header i { color: var(--text-secondary); }
-        .sender-name { font-weight: 500; color: var(--text-primary); }
-        .message-time { font-size: 0.75rem; opacity: 0.8; margin-left: auto; }
-        .input-area { flex-shrink: 0; padding-top: 0.5rem; }
-
-        #image-preview-container {
-            display: none;
+        .brand {
+            display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 0.5rem;
-            padding: 8px;
-            background-color: var(--bg-medium);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        #image-preview { max-height: 40px; max-width: 60px; border-radius: 4px; display: block; }
-        #image-filename { font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
-        #clear-image-btn { background: none; border: none; color: var(--text-secondary); font-size: 1.2rem; cursor: pointer; padding: 5px; line-height: 1; }
-        #clear-image-btn:hover { color: var(--text-primary); background: var(--bg-light-hover); border-radius: 50%; }
-
-        .input-controls { display: flex; gap: 0.8rem; align-items: center; }
-
-        #input {
-            flex-grow: 1;
-            padding: 0.8rem 1.2rem;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            background: var(--bg-medium);
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        #input:focus { outline: none; border-color: var(--text-secondary); box-shadow: 0 0 8px rgba(224, 224, 224, 0.1); }
-
-        button {
-            padding: 0.8rem 1.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            background: var(--bg-medium);
-            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-main);
+            letter-spacing: -0.01em;
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            font-size: 0.9rem;
+        }
+        
+        .brand-icon {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        /* New Chat Button */
+        .btn-reset {
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-reset:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        /* --- CHAT AREA --- */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            scroll-behavior: smooth;
+        }
+
+        /* Scrollbar */
+        .chat-area::-webkit-scrollbar { width: 5px; }
+        .chat-area::-webkit-scrollbar-track { background: transparent; }
+        .chat-area::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+        
+        .chat-content {
+            width: 100%;
+            max-width: var(--max-width);
+            padding: 0 20px 140px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            margin-top: 10vh;
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        .hero h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+        
+        .hero p {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            max-width: 480px;
+            margin: 0 auto 40px auto;
+        }
+
+        .suggestions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        .suggestion-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--glass-border);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .suggestion-card:hover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.05);
+            transform: translateY(-1px);
+        }
+        
+        .card-icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: rgba(148, 163, 184, 0.1);
+            color: var(--text-muted);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .suggestion-card:hover .card-icon {
+            background: var(--primary);
+            color: white;
+        }
+
+        .card-text { font-size: 0.9rem; color: var(--text-main); font-weight: 500; }
+
+        @media (max-width: 600px) { .suggestions { grid-template-columns: 1fr; } }
+
+        /* --- MESSAGES --- */
+        .msg-row {
+            display: flex;
+            gap: 16px;
+            width: 100%;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        .msg-row.user { justify-content: flex-end; }
+
+        .avatar {
+            width: 32px; height: 32px;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
+            font-size: 0.85rem;
         }
-        button:hover { background: var(--bg-light-hover); transform: translateY(-1px); }
-        button:active { transform: translateY(0px); }
-        button i { font-size: 1em; }
+        
+        .avatar.bot { background: var(--bg-panel); border: 1px solid var(--glass-border); color: var(--primary); }
 
-        @keyframes messageAppear {
-            from { transform: scale(0.98) translateY(5px); opacity: 0.5; }
-            to { transform: scale(1) translateY(0); opacity: 1; }
+        .bubble {
+            max-width: 85%;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            position: relative;
         }
 
-        .typing-indicator { display: none; padding: 0.5rem 1rem; margin-bottom: 0.5rem; }
-        .typing-dot { display: inline-block; width: 7px; height: 7px; margin-right: 4px; background: var(--text-secondary); border-radius: 50%; animation: typing 1.4s infinite ease-in-out; }
-        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        .typing-dot:nth-child(3) { animation-delay: 0s; }
+        .msg-row.user .bubble {
+            background: var(--gradient-main);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2);
+            border-bottom-right-radius: 2px;
+        }
 
-        /* MathJax specific styling */
-        .MathJax { color: var(--text-primary) !important; font-size: 1.05em !important; }
-        mjx-container[jax="SVG"] > svg { vertical-align: middle; }
+        .msg-row.bot .bubble {
+            background: var(--bg-panel);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            border-bottom-left-radius: 2px;
+        }
+
+        .img-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .img-grid img { height: 140px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); cursor: zoom-in; }
+
+        /* Markdown Styles */
+        .bubble strong { font-weight: 600; color: inherit; }
+        
+        .code-box {
+            background: #0f172a;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            margin: 10px 0;
+            overflow: hidden;
+            font-family: var(--font-code);
+        }
+        .code-header {
+            background: #1e293b;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            border-bottom: 1px solid #334155;
+        }
+        .code-body {
+            padding: 12px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            white-space: pre;
+        }
+
+        /* --- INPUT AREA --- */
+        .input-dock {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 24px;
+            background: linear-gradient(to top, var(--bg-app) 20%, transparent);
+            display: flex; justify-content: center;
+            z-index: 100;
+        }
+
+        .input-bar {
+            width: 100%;
+            max-width: var(--max-width);
+            background: var(--bg-panel);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .input-bar:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15);
+        }
+        
+        /* Drag Overlay */
+        .drag-cover {
+            position: absolute; top:0; left:0; right:0; bottom:0;
+            background: rgba(30, 41, 59, 0.9);
+            border: 2px dashed var(--primary);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 10; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+            color: var(--primary); font-weight: 600;
+        }
+        .input-bar.drag-active .drag-cover { opacity: 1; pointer-events: all; }
+
+        /* Preview Rail */
+        .previews { display: none; padding: 10px 12px; gap: 10px; overflow-x: auto; border-bottom: 1px solid var(--glass-border); }
+        .p-thumb { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
+        .p-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+        .p-remove {
+            position: absolute; top: -6px; right: -6px; width: 16px; height: 16px;
+            background: #ef4444; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; cursor: pointer; border: 2px solid var(--bg-panel);
+        }
+
+        .controls { display: flex; align-items: flex-end; gap: 8px; padding: 6px; }
+
+        .btn-icon {
+            width: 36px; height: 36px; border-radius: 8px; border: none;
+            background: transparent; color: var(--text-muted);
+            font-size: 1.1rem; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn-icon:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+
+        textarea {
+            flex: 1; background: transparent; border: none; color: var(--text-main);
+            font-family: var(--font-main); font-size: 0.95rem; line-height: 1.5;
+            resize: none; max-height: 150px; padding: 8px 4px;
+        }
+        textarea::placeholder { color: rgba(148, 163, 184, 0.5); }
+
+        .btn-submit {
+            width: 36px; height: 36px; border-radius: 8px; border: none;
+            background: var(--primary); color: #fff; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; opacity: 0.5; pointer-events: none;
+        }
+        .btn-submit.ready { opacity: 1; pointer-events: all; }
+        .btn-submit:hover { background: var(--primary-dim); }
+
+        /* --- LOADING & ANIMATION --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .typing { display: flex; gap: 4px; padding: 6px 0; }
+        .dot { width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; animation: bounce 1.4s infinite; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
     </style>
 </head>
 <body>
-    <!-- PERFORMANCE NOTE: The canvas element is commented out to improve performance. -->
-    <!-- <canvas id="particles-canvas"></canvas> -->
 
-    <div class="container">
-        <div class="header">
-            <h1 class="logo">Solver.AI</h1>
-            <p>IIT JEE Doubt Solver</p>
+    <div class="background-glow"></div>
+
+    <header class="app-header">
+        <div class="brand" onclick="resetChat()">
+            <i class="fas fa-shapes brand-icon"></i>
+            <span>Solver.AI</span>
         </div>
+        <!-- CHANGED: Replaced static badge with functional New Chat button -->
+        <button class="btn-reset" onclick="resetChat()">
+            <i class="fas fa-plus"></i> <span>New Chat</span>
+        </button>
+    </header>
 
-        <div class="chat-container">
-            <!-- ACCESSIBILITY NOTE: role="log" and aria-live="polite" help screen readers announce new messages. -->
-            <div id="chatbox" role="log" aria-live="polite">
-                <!-- Messages will be appended here -->
-            </div>
-
-            <!-- Typing Indicator -->
-            <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="input-area">
-                 <!-- Image Preview Area -->
-                 <div id="image-preview-container">
-                     <img id="image-preview" src="#" alt="Image Preview"/>
-                     <span id="image-filename"></span>
-                     <!-- ACCESSIBILITY NOTE: aria-label provides context for this icon-only button. -->
-                     <button id="clear-image-btn" onclick="clearImagePreview()" title="Remove Image" aria-label="Remove Image">×</button>
-                 </div>
-                 <!-- Input Controls -->
-                <div class="input-controls">
-                    <!-- ACCESSIBILITY NOTE: aria-label describes the input field for screen readers. -->
-                    <input type="text" id="input" placeholder="Ask your doubt (text or with image)..." onkeypress="handleKeyPress(event)" aria-label="Chat input field">
-                    <button onclick="triggerImageUpload()" title="Upload Image" aria-label="Upload Image">
-                        <i class="fas fa-image"></i>
-                    </button>
-                    <!-- Hidden file input -->
-                    <input type="file" id="imageUpload" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
-                    <button onclick="sendMessage()" title="Send Message" aria-label="Send Message">
-                        <i class="fas fa-paper-plane"></i> Solve
-                    </button>
+    <div class="chat-area" id="scroll-wrapper">
+        <div class="chat-content" id="chatbox">
+            
+            <!-- Hero Section -->
+            <div class="hero" id="hero">
+                <h1>Academic Doubt Solver</h1>
+                <p>Upload problems from Physics, Chemistry, Math, or Biology. <br>Get step-by-step solutions instantly.</p>
+                
+                <div class="suggestions">
+                    <div class="suggestion-card" onclick="setInput('Derive the formula for Centripetal Acceleration')">
+                        <div class="card-icon"><i class="fas fa-atom"></i></div>
+                        <div class="card-text">Physics Derivations</div>
+                    </div>
+                    <div class="suggestion-card" onclick="setInput('Find the integral of: ln(x) / x')">
+                        <div class="card-icon"><i class="fas fa-square-root-alt"></i></div>
+                        <div class="card-text">Calculus Problems</div>
+                    </div>
+                    <div class="suggestion-card" onclick="setInput('Explain the mechanism of Esterification')">
+                        <div class="card-icon"><i class="fas fa-flask"></i></div>
+                        <div class="card-text">Organic Chemistry</div>
+                    </div>
+                    <div class="suggestion-card" onclick="setInput('Describe the process of DNA Replication')">
+                        <div class="card-icon"><i class="fas fa-dna"></i></div>
+                        <div class="card-text">Biology Concepts</div>
+                    </div>
                 </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="input-dock">
+        <div class="input-bar" id="drop-zone">
+            <div class="drag-cover">Drop Image Here</div>
+            
+            <div class="previews" id="preview-rail"></div>
+
+            <div class="controls">
+                <button class="btn-icon" onclick="document.getElementById('file-upload').click()" title="Attach File">
+                    <i class="fas fa-paperclip"></i>
+                </button>
+                <input type="file" id="file-upload" multiple accept="image/*" style="display:none;" onchange="handleFiles(this.files)">
+                
+                <textarea id="user-input" placeholder="Ask a question..." rows="1"></textarea>
+                
+                <button class="btn-submit" id="send-btn" onclick="sendMessage()">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
             </div>
         </div>
     </div>
 
-  <script>
-        // --- PRODUCTION NOTES FOR JAVASCRIPT ---
-        // In a real production environment, this script would be moved to its own file (e.g., 'app.js'),
-        // likely bundled and minified to reduce file size and improve loading times.
+    <script>
+        // --- LOGIC ---
+        const API_URL = '/api/solve';
+        let state = { images: [], processing: false };
+        
+        const els = {
+            chat: document.getElementById('chatbox'),
+            scroll: document.getElementById('scroll-wrapper'),
+            input: document.getElementById('user-input'),
+            rail: document.getElementById('preview-rail'),
+            btn: document.getElementById('send-btn'),
+            hero: document.getElementById('hero'),
+            drop: document.getElementById('drop-zone')
+        };
 
-        // --- (Disabled) Particle Background Code ---
-        // This code is left here but commented out. It can be re-enabled for non-production environments if desired.
-        /*
-        class Particle {
-            constructor(canvas, ctx) { this.canvas = canvas; this.ctx = ctx; this.reset(); }
-            reset() { this.x = Math.random()*this.canvas.width; this.y = Math.random()*this.canvas.height; this.radius = Math.random()*1.5+0.5; this.color = `rgba(200, 200, 200, ${Math.random()*0.3+0.05})`; this.velocity = {x:(Math.random() - 0.5)*0.1, y:(Math.random() - 0.5)*0.1}; this.alpha = Math.random()*0.5+0.1; }
-            update() { this.x += this.velocity.x; this.y += this.velocity.y; if(this.x<-this.radius||this.x>this.canvas.width+this.radius||this.y<-this.radius||this.y>this.canvas.height+this.radius) { this.reset(); } }
-            draw() { this.ctx.save(); this.ctx.globalAlpha = this.alpha; this.ctx.beginPath(); this.ctx.arc(this.x,this.y,this.radius,0,Math.PI*2); this.ctx.fillStyle = this.color; this.ctx.fill(); this.ctx.restore(); }
+        // --- EVENTS ---
+        els.input.addEventListener('input', () => { resizeInput(); checkState(); });
+        els.input.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+
+        // Drag & Drop
+        ['dragenter','dragover'].forEach(e => els.drop.addEventListener(e, (ev) => { ev.preventDefault(); els.drop.classList.add('drag-active'); }));
+        ['dragleave','drop'].forEach(e => els.drop.addEventListener(e, (ev) => { ev.preventDefault(); els.drop.classList.remove('drag-active'); }));
+        els.drop.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+        
+        // Paste
+        window.addEventListener('paste', (e) => {
+            const files = Array.from((e.clipboardData || e.originalEvent.clipboardData).items)
+                .filter(i => i.kind === 'file' && i.type.startsWith('image/'))
+                .map(i => i.getAsFile());
+            if(files.length) handleFiles(files);
+        });
+
+        // --- FUNCTIONS ---
+        function setInput(text) {
+            els.input.value = text;
+            resizeInput();
+            checkState();
+            els.input.focus();
         }
-        let particles = [];
-        function initParticles() { const canvas = document.getElementById('particles-canvas'); if (!canvas) return; const ctx = canvas.getContext('2d'); canvas.width = window.innerWidth; canvas.height = window.innerHeight; particles = Array.from({length:70},() => new Particle(canvas,ctx)); window.addEventListener('resize',()=>{ if(!canvas) return; canvas.width=window.innerWidth; canvas.height=window.innerHeight; }); animateParticles(ctx); }
-        function animateParticles(ctx) { if (!ctx || !ctx.canvas) return; ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(() => animateParticles(ctx)); }
-        */
-        // --- End Particle Code ---
 
-
-        // --- Chat Logic ---
-
-        // =================================================================================
-        // !! CRITICAL SECURITY CHANGE !!
-        // The API Key has been REMOVED from the client-side code.
-        // Exposing an API key in the browser is a major security risk.
-        // You MUST create a backend (server-side) application that will:
-        // 1. Securely store your API key as an environment variable.
-        // 2. Receive requests from this frontend application.
-        // 3. Make the actual call to the Google Generative Language API.
-        // 4. Return the response to this frontend.
-        //
-        // This frontend now sends requests to a local endpoint '/api/solve'.
-        // You need to build this endpoint on your server.
-        // =================================================================================
-        const API_ENDPOINT = '/api/solve'; // This is your new backend endpoint.
-
-        const chatbox = document.getElementById('chatbox');
-        const input = document.getElementById('input');
-        const imagePreviewContainer = document.getElementById('image-preview-container');
-        const imagePreview = document.getElementById('image-preview');
-        const imageFilename = document.getElementById('image-filename');
-        const typingIndicator = document.querySelector('.typing-indicator');
-
-        let currentImageBase64 = null;
-        let currentImageMimeType = null;
-
-        function formatBotResponse(text) {
-            let escapedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            escapedText = escapedText.replace(/```(\w*?)\n([\s\S]*?)\n```/g, (match, lang, code) => {
-                const escapedCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                return `<div class="code-block">${escapedCode}</div>`;
+        function handleFiles(files) {
+            if(!files || !files.length) return;
+            Array.from(files).forEach(f => {
+                if(!f.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    state.images.push({ id: Date.now()+Math.random(), file: f, url: e.target.result });
+                    renderRail();
+                    checkState();
+                };
+                reader.readAsDataURL(f);
             });
-            escapedText = escapedText.replace(/```([\s\S]*?)```/g, (match, code) => {
-                const escapedCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                return `<div class="code-block">${escapedCode}</div>`;
+            document.getElementById('file-upload').value = '';
+        }
+
+        function renderRail() {
+            els.rail.innerHTML = '';
+            els.rail.style.display = state.images.length ? 'flex' : 'none';
+            state.images.forEach(img => {
+                const div = document.createElement('div');
+                div.className = 'p-thumb';
+                div.innerHTML = `<img src="${img.url}"><div class="p-remove" onclick="removeImg(${img.id})"><i class="fas fa-times"></i></div>`;
+                els.rail.appendChild(div);
             });
-            escapedText = escapedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            escapedText = escapedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-            escapedText = escapedText.replace(/\n/g, '<br>');
-            return escapedText;
         }
 
-        function triggerImageUpload() {
-            document.getElementById('imageUpload').click();
+        window.removeImg = (id) => {
+            state.images = state.images.filter(i => i.id !== id);
+            renderRail();
+            checkState();
+        };
+
+        // NEW: Function to reset the chat
+        function resetChat() {
+            // Remove all messages (but keep hero)
+            const messages = els.chat.querySelectorAll('.msg-row');
+            messages.forEach(msg => msg.remove());
+            
+            // Show Hero
+            els.hero.style.display = 'block';
+            
+            // Reset State
+            state.images = [];
+            els.input.value = '';
+            renderRail();
+            resizeInput();
+            checkState();
         }
 
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (!file.type.startsWith('image/')) {
-                alert('Please upload a valid image file.');
-                clearImagePreview();
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                currentImageBase64 = e.target.result;
-                currentImageMimeType = file.type;
-                imagePreview.src = currentImageBase64;
-                imageFilename.textContent = file.name.length > 30 ? file.name.substring(0, 27) + '...' : file.name;
-                imagePreviewContainer.style.display = 'flex';
-            }
-            reader.onerror = function(error) {
-                 console.error("FileReader error:", error);
-                 addMessage("Error: Failed to read the image file.", 'bot');
-                 clearImagePreview();
-            }
-            reader.readAsDataURL(file);
-            event.target.value = null;
+        function resizeInput() {
+            els.input.style.height = 'auto';
+            els.input.style.height = Math.min(els.input.scrollHeight, 150) + 'px';
         }
 
-        function clearImagePreview() {
-            currentImageBase64 = null;
-            currentImageMimeType = null;
-            imagePreview.src = '#';
-            imageFilename.textContent = '';
-            imagePreviewContainer.style.display = 'none';
-            document.getElementById('imageUpload').value = null;
+        function checkState() {
+            const hasContent = els.input.value.trim() || state.images.length;
+            els.btn.classList.toggle('ready', hasContent);
         }
 
         async function sendMessage() {
-            const messageText = input.value.trim();
-            if (!messageText && !currentImageBase64) return;
+            const text = els.input.value.trim();
+            if((!text && !state.images.length) || state.processing) return;
+            
+            state.processing = true;
+            if(els.hero.style.display !== 'none') els.hero.style.display = 'none';
 
-            addMessage(messageText, 'user', currentImageBase64);
+            // User Message
+            addMsg('user', text, [...state.images]);
 
-            let parts = [];
-            if (currentImageBase64) {
-                 const base64Data = currentImageBase64.split(',')[1];
-                 if (base64Data && currentImageMimeType) {
-                     parts.push({
-                         inline_data: { mime_type: currentImageMimeType, data: base64Data }
-                     });
-                 } else {
-                      console.error("Error preparing image data for API.");
-                      addMessage("Error: Could not process the uploaded image.", 'bot');
-                      clearImagePreview();
-                      return;
-                 }
+            // Prepare Data
+            const parts = [];
+            if(text) {
+                parts.push({ text: state.images.length ? "Question: " + text : text });
             }
-            if (messageText) {
-                let promptText = messageText;
-                if(parts.length > 0) {
-                    promptText = "Solve the problem shown in the image. Question text: " + messageText;
-                }
-                // The detailed "step-by-step" prompt is best handled by the backend
-                // to allow for easier tuning without changing frontend code.
-                parts.push({ text: promptText });
-            }
+            state.images.forEach(i => {
+                parts.push({ inline_data: { mime_type: i.file.type, data: i.url.split(',')[1] } });
+            });
 
-            input.value = '';
-            clearImagePreview();
+            // Clear Input
+            els.input.value = '';
+            state.images = [];
+            renderRail();
+            resizeInput();
+            checkState();
 
-            typingIndicator.style.display = 'block';
-            scrollToBottom();
+            // Loading
+            const loadId = addLoader();
 
             try {
-                // This 'fetch' now goes to YOUR backend, not directly to Google.
-                const response = await fetch(API_ENDPOINT, {
+                const res = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts }] })
                 });
+                
+                document.getElementById(loadId).remove();
+                if(!res.ok) throw new Error("Server Error");
+                const data = await res.json();
+                if(data.error) throw new Error(data.error);
 
-                if (!response.ok) {
-                    // UX IMPROVEMENT: Provide a user-facing error message.
-                    const errorText = await response.text();
-                    throw new Error(`The server responded with an error (${response.status}). Please try again later. Details: ${errorText}`);
-                }
+                addMsg('bot', data.text);
 
-                const data = await response.json();
-
-                 let botResponse;
-                 if (data.error) {
-                    botResponse = `Error from AI service: ${data.error}`;
-                 } else if (data.text) {
-                    botResponse = data.text;
-                 } else {
-                    botResponse = "Received an unexpected response from the server.";
-                 }
-
-                addMessage(botResponse, 'bot');
-
-            } catch (error) {
-                console.error('Error fetching from backend:', error);
-                // UX IMPROVEMENT: Display the error in the chat window.
-                addMessage(`Sorry, something went wrong. Could not connect to the server. Please check your connection and try again.`, 'bot');
+            } catch (err) {
+                if(document.getElementById(loadId)) document.getElementById(loadId).remove();
+                addMsg('bot', `⚠️ Error: ${err.message}`);
             } finally {
-                typingIndicator.style.display = 'none';
+                state.processing = false;
             }
         }
 
-        function addMessage(text, sender, imageBase64 = null) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}`;
+        function addMsg(role, text, imgs = []) {
+            const div = document.createElement('div');
+            div.className = `msg-row ${role}`;
+            
+            let html = '';
+            if(imgs.length) html += `<div class="img-grid">${imgs.map(i => `<img src="${i.url}">`).join('')}</div>`;
+            if(text) html += role === 'bot' ? formatText(text) : text.replace(/</g, "&lt;").replace(/\n/g, '<br>');
 
-            let imageHTML = '';
-            if (imageBase64 && sender === 'user') {
-                imageHTML = `<img src="${imageBase64}" alt="User Uploaded Image">`;
-            }
-
-            // Basic HTML escaping for user text to prevent XSS.
-            const userSanitizedText = text ? text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>') : '';
-            const formattedText = sender === 'bot' ? formatBotResponse(text) : userSanitizedText;
-
-            messageDiv.innerHTML = `
-                <div class="message-header">
-                    <i class="fas ${sender === 'bot' ? 'fa-robot' : 'fa-user'}"></i>
-                    <span class="sender-name">${sender === 'bot' ? 'Solver.AI' : 'You'}</span>
-                    <span class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div class="message-content">
-                    ${imageHTML}
-                    <div class="message-text-content">${formattedText}</div>
-                </div>
+            div.innerHTML = `
+                ${role === 'bot' ? `<div class="avatar bot"><i class="fas fa-shapes"></i></div>` : ''}
+                <div class="bubble">${html}</div>
             `;
-            chatbox.appendChild(messageDiv);
+            els.chat.appendChild(div);
+            if(role === 'bot') MathJax.typesetPromise([div]).catch(e => console.log(e));
+            scrollToBottom();
+        }
 
-            if (sender === 'bot') {
-                 setTimeout(() => {
-                    try {
-                         const contentToTypeset = messageDiv.querySelector('.message-text-content');
-                         if (contentToTypeset) {
-                             MathJax.typesetPromise([contentToTypeset]).catch((err) => console.error('MathJax Typesetting Error:', err));
-                         }
-                    } catch (e) {
-                         console.error("Error queueing MathJax:", e);
-                    }
-                 }, 50);
-            }
-
-             scrollToBottom();
+        function addLoader() {
+            const id = 'l-' + Date.now();
+            const div = document.createElement('div');
+            div.className = 'msg-row bot';
+            div.id = id;
+            div.innerHTML = `
+                <div class="avatar bot"><i class="fas fa-shapes"></i></div>
+                <div class="bubble"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+            `;
+            els.chat.appendChild(div);
+            scrollToBottom();
+            return id;
         }
 
         function scrollToBottom() {
-             requestAnimationFrame(() => {
-                 chatbox.scrollTop = chatbox.scrollHeight;
-             });
+            setTimeout(() => els.scroll.scrollTo({ top: els.scroll.scrollHeight, behavior: 'smooth' }), 50);
         }
 
-        function handleKeyPress(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            }
+        function formatText(text) {
+            let t = text.replace(/</g, "&lt;");
+            t = t.replace(/```(\w*?)\n([\s\S]*?)\n```/g, '<div class="code-box"><div class="code-header">$1</div><div class="code-body">$2</div></div>');
+            t = t.replace(/`([^`]+)`/g, '<span style="background:rgba(255,255,255,0.1); padding:2px 5px; border-radius:4px; font-family:var(--font-code); font-size:0.9em;">$1</span>');
+            t = t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            return t.replace(/\n/g, '<br>');
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // PERFORMANCE NOTE: Call to initParticles() is removed.
-            // initParticles();
-            addMessage("Hello! I'm Solver.AI. Ask your IIT JEE doubts (Physics, Chemistry, Math). You can type your question or upload an image.", 'bot');
-        });
     </script>
 </body>
 </html>
