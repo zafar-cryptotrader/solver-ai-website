@@ -228,7 +228,7 @@
         @media (max-width: 600px) { .suggestions { grid-template-columns: 1fr; } }
 
         /* --- MESSAGES --- */
-        .msg-row {
+       /* .msg-row {
             display: flex;
             gap: 16px;
             width: 100%;
@@ -271,7 +271,81 @@
         }
 
         .img-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-        .img-grid img { height: 140px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); cursor: zoom-in; }
+        .img-grid img { height: 140px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); cursor: zoom-in; } */
+        /* --- MESSAGES (Notebook Style) --- */
+.msg-row {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    animation: slideUp 0.3s ease-out;
+    margin-bottom: 24px; /* More space between Q & A */
+}
+
+/* USER: Keep as a distinct "Question" bubble */
+.msg-row.user {
+    justify-content: flex-end;
+    padding-left: 40px; /* Indent from left */
+}
+
+.msg-row.user .bubble {
+    background: var(--bg-panel); /* Darker background */
+    color: var(--text-muted);    /* Muted text to de-emphasize the question */
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    border: 1px solid var(--glass-border);
+    max-width: 100%; /* Let it take space if needed */
+    display: inline-block;
+}
+
+/* BOT: The "Main Event" - Full Width Solution */
+.msg-row.bot {
+    flex-direction: column; /* Stack Avatar on top of content (optional) */
+    width: 100%;
+    border-bottom: 1px solid var(--glass-border); /* Separator line */
+    padding-bottom: 24px;
+}
+
+.msg-row.bot .bubble {
+    width: 100%;            /* USE FULL SCREEN WIDTH */
+    max-width: 100%;        /* Remove the 85% limit */
+    padding: 0;             /* Remove bubble padding */
+    background: transparent; /* No bubble background */
+    border: none;           /* No bubble border */
+    color: var(--text-main);
+    font-size: 1rem;        /* Slightly larger font for reading */
+    line-height: 1.7;       
+    overflow-x: hidden;     /* Prevent horizontal scroll on the body */
+}
+
+/* MathJax Specifics for Full Width */
+mjx-container {
+    overflow-x: auto;       /* Scroll ONLY the equation if it's still too big */
+    overflow-y: hidden;
+    max-width: 100%;
+    display: block !important; /* Start on new line */
+    margin: 10px 0 !important;
+    padding: 10px 0;
+}
+
+/* Make the bot avatar look like a section header icon */
+.msg-row.bot .avatar {
+    margin-bottom: 12px;
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    font-size: 1.2rem;
+    width: auto;
+    justify-content: flex-start;
+}
+.msg-row.bot .avatar::after {
+    content: "Solution";
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-left: 8px;
+    color: var(--text-main);
+}
 
         /* Markdown Styles */
         .bubble strong { font-weight: 600; color: inherit; }
