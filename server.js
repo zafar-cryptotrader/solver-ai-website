@@ -72,6 +72,124 @@ app.post('/api/solve', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch response from the AI service.' });
   }
 });
+// --- NEW MOCK TEST FEATURE ---
+
+const crypto = require('crypto'); // Built-in Node module for generating unique IDs
+
+// In-memory cache to store tests temporarily without needing a database.
+// Structure: { "session_id": { testData: [...], expiresAt: timestamp } }
+const activeTestsCache = {}; 
+
+// Clean up expired tests every hour to save RAM
+setInterval(() => {
+    const now = Date.now();
+    for (const sessionId in activeTestsCache) {
+        if (activeTestsCache[sessionId].expiresAt < now) {
+            delete activeTestsCache[sessionId];
+        }
+    }
+}, 3600000);
+
+// A. Route to generate the test using Gemini
+app.post('/api/generate-test', async (req, res) => {
+    try {
+        const { subject, topic, numQuestions = 5, difficulty = "JEE Main" } = req.body;
+
+        const prompt = `
+        You are an expert ${difficulty} examiner. Generate a highly accurate mock test for Subject: ${subject}, Topic: ${topic}.
+        Generate exactly ${numQuestions} questions.
+        
+        CRITICAL RULES:
+        1. Output strictly in valid JSON array format. Do not use markdown formatting like \`\`\`json. Return ONLY the raw JSON array.
+        2. Use LaTeX for math/physics formulas (wrap inline in $...$, block in $$...$$).
+        
+        Format each object in the array exactly like this:
+        {
+          "questionId": "unique_string_id",
+          "text": "Question text here",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correctOptionIndex": 0, 
+          "solution": "Step-by-step detailed solution here"
+        }
+        `;
+
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        
+        const geminiResponse = await axios.post(API_URL, {
+            contents: [{ parts: [{ text: prompt }] }]
+        });
+
+        let responseText = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!responseText) throw new Error("Empty response from AI");
+
+        // Clean up AI response to ensure it's pure JSON (strip markdown if AI accidentally adds it)
+        responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const generatedQuestions = JSON.parse(responseText);
+
+        // Create a unique session ID
+        const testSessionId = crypto.randomUUID();
+
+        // Save FULL test to server RAM (Expires in 2 hours)
+        activeTestsCache[testSessionId] = {
+            questions: generatedQuestions,
+            expiresAt: Date.now() + (2 * 60 * 60 * 1000)
+        };
+
+        // Send a SECURE version to the frontend (Strip correct answers and solutions)
+        const secureQuestions = generatedQuestions.map(q => ({
+            questionId: q.questionId,
+            text: q.text,
+            options: q.options
+        }));
+
+        res.json({ testSessionId, questions: secureQuestions });
+
+    } catch (error) {
+        console.error("Error generating test:", error.message);
+        res.status(500).json({ error: "Failed to generate test. AI might have returned invalid format." });
+    }
+});
+
+// B. Route to evaluate the test
+app.post('/api/evaluate-test', (req, res) => {
+    const { testSessionId, userResponses } = req.body;
+    const testSession = activeTestsCache[testSessionId];
+
+    if (!testSession) {
+        return res.status(400).json({ error: "Test session expired or invalid." });
+    }
+
+    let score = 0;
+    const totalMarks = testSession.questions.length * 4;
+    const detailedAnalysis = [];
+
+    // Grade it! +4 for correct, -1 for incorrect.
+    testSession.questions.forEach((actualQuestion) => {
+        const userResponse = userResponses.find(ur => ur.questionId === actualQuestion.questionId);
+        const selectedOption = userResponse ? userResponse.selectedOptionIndex : null;
+        
+        const isCorrect = selectedOption === actualQuestion.correctOptionIndex;
+
+        if (isCorrect) score += 4;
+        else if (selectedOption !== null) score -= 1;
+
+        detailedAnalysis.push({
+            questionText: actualQuestion.text,
+            options: actualQuestion.options,
+            userAnswer: selectedOption,
+            correctAnswer: actualQuestion.correctOptionIndex,
+            isCorrect: isCorrect,
+            solution: actualQuestion.solution
+        });
+    });
+
+    // Clean up memory
+    delete activeTestsCache[testSessionId];
+
+    res.json({ score, totalMarks, detailedAnalysis });
+});
+// --- END MOCK TEST FEATURE ---
 
 // 6. Start the server
 app.listen(PORT, () => {
