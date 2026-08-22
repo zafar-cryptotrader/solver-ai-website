@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Test - Solver.AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], processEscapes: true },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+    <style>
+        :root {
+            --bg-app: #0f172a; --bg-panel: #1e293b; --primary: #3b82f6; --secondary: #06b6d4;
+            --glass-border: rgba(148, 163, 184, 0.1); --text-main: #f1f5f9; --text-muted: #94a3b8;
+            --success: #22c55e; --danger: #ef4444;
+        }
+        body { margin: 0; background: var(--bg-app); color: var(--text-main); font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; }
+        
+        .app-header { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid var(--glass-border); }
+        .brand { font-weight: 600; font-size: 1.1rem; display: flex; gap: 10px; cursor: pointer; }
+        
+        /* Screens */
+        .screen { display: none; flex: 1; overflow-y: auto; padding: 20px; }
+        .screen.active { display: flex; }
+
+        /* Setup Screen */
+        #setup-screen { flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .input-group { margin: 15px 0; display: flex; flex-direction: column; gap: 8px; text-align: left; width: 100%; max-width: 400px; }
+        input, select { background: var(--bg-panel); border: 1px solid var(--glass-border); color: var(--text-main); padding: 12px; border-radius: 8px; font-family: 'Inter'; font-size: 1rem; }
+        .btn-primary { background: var(--primary); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: 0.2s; }
+        .btn-primary:hover { opacity: 0.9; }
+
+        /* Test Interface (NTA Style) */
+        #test-screen { flex-direction: row; gap: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
+        .left-panel { flex: 1; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; }
+        .right-panel { width: 300px; display: flex; flex-direction: column; gap: 20px; }
+        
+        .q-header { padding: 20px; border-bottom: 1px solid var(--glass-border); font-size: 1.2rem; font-weight: 600; }
+        .q-body { padding: 20px; flex: 1; overflow-y: auto; font-size: 1.1rem; line-height: 1.6; }
+        .options { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .option-label { display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px; cursor: pointer; }
+        .option-label:hover { background: rgba(255,255,255,0.08); }
+        .q-footer { padding: 20px; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; }
+        
+        .timer-box { background: var(--bg-panel); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; text-align: center; font-size: 1.5rem; font-family: 'JetBrains Mono'; color: var(--secondary); font-weight: bold; }
+        .palette-box { background: var(--bg-panel); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; flex: 1; }
+        .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
+        .p-btn { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-main); font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .p-btn.answered { background: var(--success); color: white; border-color: var(--success); }
+
+        /* Results Screen */
+        #result-screen { flex-direction: column; max-width: 800px; margin: 0 auto; gap: 20px; }
+        .score-card { background: var(--bg-panel); padding: 30px; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border); }
+        .score-card h1 { font-size: 3rem; color: var(--primary); margin: 10px 0; }
+        .analysis-card { background: var(--bg-panel); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--glass-border); }
+        .correct-ans { color: var(--success); font-weight: 600; }
+        .wrong-ans { color: var(--danger); font-weight: 600; }
+        
+        @media (max-width: 800px) { #test-screen { flex-direction: column; } .right-panel { width: 100%; } }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="brand" onclick="window.location.href='/'">
+            <i class="fas fa-shapes" style="color: var(--primary);"></i>
+            <span>Solver.AI Mock Tests</span>
+        </div>
+        <button class="btn-primary" style="padding: 6px 12px; font-size:0.9rem;" onclick="window.location.href='/'">Back to Chat</button>
+    </header>
+
+    <!-- SETUP SCREEN -->
+    <div id="setup-screen" class="screen active">
+        <h2>Generate AI Mock Test</h2>
+        <p style="color: var(--text-muted);">Gemini will generate a custom exam instantly.</p>
+        
+        <div class="input-group">
+            <label>Subject</label>
+            <select id="t-subject">
+                <option>Physics</option><option>Chemistry</option><option>Mathematics</option><option>Biology</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>Topic / Chapter</label>
+            <input type="text" id="t-topic" placeholder="e.g. Thermodynamics, Calculus..." value="Rotational Dynamics">
+        </div>
+        <div class="input-group">
+            <label>Number of Questions</label>
+            <select id="t-num"><option value="5">5 Questions</option><option value="10">10 Questions</option></select>
+        </div>
+        
+        <button class="btn-primary" id="start-btn" onclick="generateTest()" style="margin-top: 20px; width: 100%; max-width: 400px;">
+            <i class="fas fa-magic"></i> Generate & Start Test
+        </button>
+        <p id="loading-msg" style="display:none; color: var(--secondary);">Generating test using Gemini... Please wait.</p>
+    </div>
+
+    <!-- TEST INTERFACE -->
+    <div id="test-screen" class="screen">
+        <div class="left-panel">
+            <div class="q-header" id="q-no">Question 1</div>
+            <div class="q-body">
+                <div id="q-text"></div>
+                <div class="options" id="options-container"></div>
+            </div>
+            <div class="q-footer">
+                <button class="btn-primary" style="background: transparent; border: 1px solid var(--text-muted);" onclick="clearResponse()">Clear Response</button>
+                <button class="btn-primary" onclick="saveAndNext()">Save & Next</button>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="timer-box" id="timer">00:00</div>
+            <div class="palette-box">
+                <div style="font-weight: 600;">Question Palette</div>
+                <div class="palette-grid" id="palette"></div>
+                <button class="btn-primary" style="width: 100%; margin-top: 20px; background: var(--danger);" onclick="submitTest()">Submit Final Test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESULTS SCREEN -->
+    <div id="result-screen" class="screen">
+        <div class="score-card">
+            <h2>Test Completed!</h2>
+            <h1 id="score-text">0 / 0</h1>
+            <p>Accuracy: <span id="accuracy-text">0%</span></p>
+        </div>
+        <h3>Detailed Analysis & Solutions</h3>
+        <div id="analysis-container"></div>
+    </div>
+
+    <script>
+        let testSessionId = "";
+        let questions = [];
+        let userResponses = []; // [{ questionId, selectedOptionIndex }]
+        let currentQIndex = 0;
+        let timeLeft = 0;
+        let timerInterval;
+
+        // 1. Generate Test
+        async function generateTest() {
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('loading-msg').style.display = 'block';
+
+            const payload = {
+                subject: document.getElementById('t-subject').value,
+                topic: document.getElementById('t-topic').value,
+                numQuestions: parseInt(document.getElementById('t-num').value)
+            };
+
+            try {
+                const res = await fetch('/api/generate-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                if(data.error) throw new Error(data.error);
+
+                testSessionId = data.testSessionId;
+                questions = data.questions;
+                userResponses = questions.map(q => ({ questionId: q.questionId, selectedOptionIndex: null }));
+                timeLeft = questions.length * 3 * 60; // 3 mins per question
+                
+                startTimer();
+                renderPalette();
+                renderQuestion(0);
+                
+                document.getElementById('setup-screen').classList.remove('active');
+                document.getElementById('test-screen').classList.add('active');
+            } catch (e) {
+                alert(e.message);
+                document.getElementById('start-btn').style.display = 'block';
+                document.getElementById('loading-msg').style.display = 'none';
+            }
+        }
+
+        // 2. Render UI
+        function renderPalette() {
+            const grid = document.getElementById('palette');
+            grid.innerHTML = '';
+            questions.forEach((_, i) => {
+                const btn = document.createElement('button');
+                btn.className = `p-btn ${userResponses[i].selectedOptionIndex !== null ? 'answered' : ''}`;
+                btn.innerText = i + 1;
+                btn.onclick = () => renderQuestion(i);
+                grid.appendChild(btn);
+            });
+        }
+
+        function renderQuestion(index) {
+            currentQIndex = index;
+            const q = questions[index];
+            document.getElementById('q-no').innerText = `Question ${index + 1} of ${questions.length}`;
+            document.getElementById('q-text').innerHTML = q.text;
+            
+            const optHtml = q.options.map((opt, i) => `
+                <label class="option-label">
+                    <input type="radio" name="q-option" value="${i}" ${userResponses[index].selectedOptionIndex === i ? 'checked' : ''}>
+                    <span>${opt}</span>
+                </label>
+            `).join('');
+            document.getElementById('options-container').innerHTML = optHtml;
+            
+            MathJax.typesetPromise();
+        }
+
+        function saveAndNext() {
+            const selected = document.querySelector('input[name="q-option"]:checked');
+            if (selected) {
+                userResponses[currentQIndex].selectedOptionIndex = parseInt(selected.value);
+            }
+            renderPalette();
+            if (currentQIndex < questions.length - 1) renderQuestion(currentQIndex + 1);
+        }
+
+        function clearResponse() {
+            userResponses[currentQIndex].selectedOptionIndex = null;
+            renderPalette();
+            renderQuestion(currentQIndex);
+        }
+
+        // 3. Timer & Submit
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (timeLeft <= 0) { clearInterval(timerInterval); submitTest(); }
+                const m = Math.floor(timeLeft / 60);
+                const s = timeLeft % 60;
+                document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                timeLeft--;
+            }, 1000);
+        }
+
+        async function submitTest() {
+            clearInterval(timerInterval);
+            document.getElementById('test-screen').classList.remove('active');
+            document.getElementById('result-screen').classList.add('active');
+            document.getElementById('score-text').innerText = "Evaluating...";
+
+            const res = await fetch('/api/evaluate-test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ testSessionId, userResponses })
+            });
+            const result = await res.json();
+            
+            document.getElementById('score-text').innerText = `${result.score} / ${result.totalMarks}`;
+            const attempts = result.detailedAnalysis.filter(r => r.userAnswer !== null).length;
+            const correct = result.detailedAnalysis.filter(r => r.isCorrect).length;
+            document.getElementById('accuracy-text').innerText = attempts > 0 ? Math.round((correct/attempts)*100) + '%' : '0%';
+
+            let analysisHtml = '';
+            result.detailedAnalysis.forEach((r, i) => {
+                const stat = r.isCorrect ? '<span class="correct-ans">Correct (+4)</span>' : 
+                             (r.userAnswer === null ? '<span style="color:var(--text-muted)">Unattempted (0)</span>' : '<span class="wrong-ans">Incorrect (-1)</span>');
+                
+                analysisHtml += `
+                    <div class="analysis-card">
+                        <div style="margin-bottom:10px;"><strong>Q${i+1}:</strong> ${r.questionText}</div>
+                        <div style="font-size:0.9rem;">
+                            Status: ${stat}<br>
+                            Your Answer: ${r.userAnswer !== null ? r.options[r.userAnswer] : 'None'}<br>
+                            Correct Answer: <span class="correct-ans">${r.options[r.correctAnswer]}</span>
+                        </div>
+                        <div style="margin-top:15px; padding-top:15px; border-top:1px solid var(--glass-border);">
+                            <strong>AI Explanation:</strong><br> ${r.solution}
+                        </div>
+                    </div>`;
+            });
+            document.getElementById('analysis-container').innerHTML = analysisHtml;
+            MathJax.typesetPromise();
+        }
+    </script>
+</body>
+</html>
