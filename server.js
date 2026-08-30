@@ -4,7 +4,7 @@
 const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto'); // Built-in Node module for generating unique IDs
-require('dotenv').config(); 
+require('dotenv').config(); // Loads environment variables from .env file
 
 // 2. Initialize Express app and set port
 const app = express();
@@ -18,7 +18,7 @@ app.use(express.json({ limit: '10mb' }));
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 if (!GEMINI_API_KEY) {
-  console.error("FATAL ERROR: GEMINI_API_KEY is not defined.");
+  console.error("FATAL ERROR: GEMINI_API_KEY is not defined in the .env file.");
   process.exit(1);
 }
 
@@ -34,26 +34,37 @@ app.post('/api/solve', async (req, res) => {
       return res.status(400).json({ error: 'Missing "contents" in request body.' });
     }
     
-    const geminiResponse = await axios.post(API_URL, { contents });
+    const systemInstruction = {
+        role: "system",
+        parts: [{text: "You are Solver.AI, an expert in Physics, Chemistry, and Mathematics for the IIT JEE exam. Provide a clear, step-by-step solution. Use LaTeX for all mathematical expressions. Be encouraging and helpful."}]
+    };
+
+    const geminiResponse = await axios.post(API_URL, { 
+        contents,
+        // systemInstruction
+    });
+
     const responseText = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (responseText) {
       res.json({ text: responseText });
     } else {
-      res.status(500).json({ error: 'Received an empty or invalid response.' });
+      console.warn("Gemini API response was valid but contained no text.", geminiResponse.data);
+      res.status(500).json({ error: 'Received an empty or invalid response from the AI service.' });
     }
+
   } catch (error) {
-    console.error("Error calling Gemini API:", error.message);
-    res.status(500).json({ error: 'Failed to fetch response.' });
+    console.error("Error calling Gemini API:", error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'Failed to fetch response from the AI service.' });
   }
 });
 
 
 // ---------------------------------------------------------
-// NEW AI MOCK TEST ENGINE (CHUNKED)
+// NEW AI MOCK TEST ENGINE (CHUNKED + REAL IMAGES)
 // ---------------------------------------------------------
 
-// In-memory cache. Declared ONLY ONCE here.
+// In-memory cache. Declared ONLY ONCE to prevent crashes.
 const activeTestsCache = {}; 
 
 // A. Route to generate the test in chunks
@@ -66,22 +77,22 @@ app.post('/api/generate-chunk', async (req, res) => {
             : `the specific topic '${topic}' in ${subject} for ${examType}`;
 
         const prompt = `
-        You are an expert NTA paper setter for ${examType}. Tap into your deep knowledge of past year ${examType} papers.
+        You are an expert NTA paper setter for ${examType}. Tap into your deep educational training and knowledge of past year ${examType} papers.
         Generate exactly ${numQuestionsToGenerate} highly accurate questions for ${scope}. (These are questions ${startIndex} onwards).
         
         CRITICAL RULES:
         1. Output ONLY a raw JSON array.
-        2. Use LaTeX for math/physics/chemistry formulas (wrap inline in $...$, block in $$...$$).
-        3. DIAGRAMS: You MUST include diagrams for at least 2 out of these ${numQuestionsToGenerate} questions. 
-           - Output beautiful, well-proportioned raw SVG code in the "diagramSvg" field. 
-           - SVG RULES: Always include a viewBox (e.g., viewBox="0 0 300 300"). Use stroke="black", fill="transparent", and make text labels large (font-size="16"). 
-           - If no diagram is needed, leave as "".
+        2. DIAGRAMS: You MUST include diagrams for at least 2 out of these ${numQuestionsToGenerate} questions (e.g., logic gates, mechanics blocks, circuits, biology cells).
+           - Do NOT try to draw them. Instead, tap into your training and use your search capability to provide a REAL, WORKING public image URL that perfectly illustrates the question.
+           - Put this direct link in the "imageUrl" field.
+           - If no diagram is needed for a specific question, leave it as "".
+        3. Use LaTeX for math/physics/chemistry formulas (wrap inline in $...$, block in $$...$$).
         
         Format each object exactly like this:
         {
           "questionId": "unique_string_id",
           "text": "Question text here",
-          "diagramSvg": "<svg viewBox='...'>...</svg>",
+          "imageUrl": "https://... (valid image URL or empty string)",
           "options": ["Option A", "Option B", "Option C", "Option D"],
           "correctOptionIndex": 0, 
           "solution": "Step-by-step detailed solution here"
@@ -92,6 +103,8 @@ app.post('/api/generate-chunk', async (req, res) => {
         
         const geminiResponse = await axios.post(API_URL, {
             contents: [{ parts: [{ text: prompt }] }],
+            // Enable Google Search so Gemini can fetch real educational images
+            tools: [{ googleSearch: {} }], 
             generationConfig: { responseMimeType: "application/json" }
         });
 
@@ -106,18 +119,18 @@ app.post('/api/generate-chunk', async (req, res) => {
             currentSessionId = crypto.randomUUID();
             activeTestsCache[currentSessionId] = {
                 questions: [],
-                expiresAt: Date.now() + (5 * 60 * 60 * 1000)
+                expiresAt: Date.now() + (5 * 60 * 60 * 1000) // 5 hours expiry
             };
         }
 
         // Append new questions
         activeTestsCache[currentSessionId].questions.push(...generatedQuestions);
 
-        // Secure version for frontend
+        // Secure version for frontend (Strip correct answers and solutions)
         const secureQuestions = generatedQuestions.map(q => ({
             questionId: q.questionId,
             text: q.text,
-            diagramSvg: q.diagramSvg,
+            imageUrl: q.imageUrl || "", // Pass the image URL securely
             options: q.options
         }));
 
@@ -125,6 +138,7 @@ app.post('/api/generate-chunk', async (req, res) => {
 
     } catch (error) {
         console.error("Backend Error generating chunk:", error.message);
+        if (error.response) console.error(error.response.data);
         res.status(500).json({ error: "Failed to generate chunk." });
     }
 });
@@ -145,12 +159,13 @@ app.post('/api/evaluate-test', (req, res) => {
         const selectedOption = userResponse ? userResponse.selectedOptionIndex : null;
         
         const isCorrect = selectedOption === actualQuestion.correctOptionIndex;
+        
         if (isCorrect) score += 4;
         else if (selectedOption !== null) score -= 1;
 
         detailedAnalysis.push({
             questionText: actualQuestion.text,
-            diagramSvg: actualQuestion.diagramSvg,
+            imageUrl: actualQuestion.imageUrl || "", // Include image in results analysis
             options: actualQuestion.options,
             userAnswer: selectedOption,
             correctAnswer: actualQuestion.correctOptionIndex,
@@ -167,5 +182,5 @@ app.post('/api/evaluate-test', (req, res) => {
 // START SERVER
 // ---------------------------------------------------------
 app.listen(PORT, () => {
-  console.log(`Server running successfully on port ${PORT}`);
+  console.log(`Server is running successfully on port ${PORT}`);
 });
