@@ -93,20 +93,27 @@ setInterval(() => {
 // A. Route to generate the test using Gemini
 app.post('/api/generate-test', async (req, res) => {
     try {
-        const { subject, topic, numQuestions = 5, difficulty = "JEE Main" } = req.body;
+        const { examType, syllabusType, subject, topic, numQuestions } = req.body;
+
+        // Adjust prompt based on Full Syllabus or Topic-wise
+        const scope = syllabusType === "Full Syllabus" 
+            ? `the entire full syllabus of ${subject} for ${examType}` 
+            : `the specific topic '${topic}' in ${subject} for ${examType}`;
 
         const prompt = `
-        You are an expert ${difficulty} examiner. Generate a highly accurate mock test for Subject: ${subject}, Topic: ${topic}.
+        You are an expert ${examType} paper setter. Generate a highly accurate mock test covering ${scope}.
         Generate exactly ${numQuestions} questions.
         
         CRITICAL RULES:
-        1. Output strictly in valid JSON array format. Do not use markdown formatting like \`\`\`json. Return ONLY the raw JSON array.
-        2. Use LaTeX for math/physics formulas (wrap inline in $...$, block in $$...$$).
+        1. Output ONLY a raw JSON array. No markdown blocks, no conversational text.
+        2. Use LaTeX for math/physics/chemistry formulas (wrap inline in $...$, block in $$...$$).
+        3. If a question REQUIRES a diagram (e.g., physics circuit, chemical structure, biological diagram), generate clean, responsive raw SVG code and put it in the "diagramSvg" field. Ensure the SVG has a viewBox. If no diagram is needed, leave it as an empty string "".
         
         Format each object in the array exactly like this:
         {
           "questionId": "unique_string_id",
           "text": "Question text here",
+          "diagramSvg": "<svg>...</svg> or empty string",
           "options": ["Option A", "Option B", "Option C", "Option D"],
           "correctOptionIndex": 0, 
           "solution": "Step-by-step detailed solution here"
@@ -116,38 +123,35 @@ app.post('/api/generate-test', async (req, res) => {
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         
         const geminiResponse = await axios.post(API_URL, {
-            contents: [{ parts: [{ text: prompt }] }]
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" } // Forces pure JSON
         });
 
         let responseText = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        
         if (!responseText) throw new Error("Empty response from AI");
 
-        // Clean up AI response to ensure it's pure JSON (strip markdown if AI accidentally adds it)
-        responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         const generatedQuestions = JSON.parse(responseText);
-
-        // Create a unique session ID
         const testSessionId = crypto.randomUUID();
 
-        // Save FULL test to server RAM (Expires in 2 hours)
+        // Save FULL test to server RAM (Expires in 4 hours for full tests)
         activeTestsCache[testSessionId] = {
             questions: generatedQuestions,
-            expiresAt: Date.now() + (2 * 60 * 60 * 1000)
+            expiresAt: Date.now() + (4 * 60 * 60 * 1000)
         };
 
         // Send a SECURE version to the frontend (Strip correct answers and solutions)
         const secureQuestions = generatedQuestions.map(q => ({
             questionId: q.questionId,
             text: q.text,
+            diagramSvg: q.diagramSvg,
             options: q.options
         }));
 
         res.json({ testSessionId, questions: secureQuestions });
 
     } catch (error) {
-        console.error("Error generating test:", error.message);
-        res.status(500).json({ error: "Failed to generate test. AI might have returned invalid format." });
+        console.error("Backend Error generating test:", error.message);
+        res.status(500).json({ error: "AI failed to generate the test. It might have timed out generating a massive paper. Try generating 25 questions first!" });
     }
 });
 
