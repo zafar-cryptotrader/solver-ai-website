@@ -104,7 +104,7 @@ app.post('/api/generate-chunk', async (req, res) => {
         const geminiResponse = await axios.post(API_URL, {
             contents: [{ parts: [{ text: prompt }] }],
             // Enable Google Search so Gemini can fetch real educational images
-            tools: [{ googleSearch: {} }], 
+            
             generationConfig: { responseMimeType: "application/json" }
         });
 
