@@ -43,8 +43,17 @@
         .loading-badge { font-size: 0.85rem; background: var(--warning); color: #000; padding: 4px 8px; border-radius: 12px; display: none; }
         
         .q-body { padding: 20px; flex: 1; overflow-y: auto; font-size: 1.1rem; line-height: 1.6; }
+        
+        /* White Image Box Style */
+        .diagram-container { 
+            display: none; background: white; padding: 10px; border-radius: 8px; 
+            border: 1px solid var(--glass-border); margin: 15px 0; text-align: center; 
+        }
+        
         .options { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
         .option-label { display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px; cursor: pointer; }
+        .option-label:hover { background: rgba(255,255,255,0.08); }
+        .q-footer { padding: 20px; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; }
         
         .timer-box { background: var(--bg-panel); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; text-align: center; font-size: 1.5rem; font-family: 'JetBrains Mono'; color: var(--secondary); font-weight: bold; }
         .palette-box { background: var(--bg-panel); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; flex: 1; overflow-y: auto; max-height: 60vh;}
@@ -60,8 +69,7 @@
         .correct-ans { color: var(--success); font-weight: 600; }
         .wrong-ans { color: var(--danger); font-weight: 600; }
         
-        .image-container { background: white; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); display: inline-block; margin: 15px 0; text-align: center; width: 100%; box-sizing: border-box; }
-        .image-container img { max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 4px; }
+        @media (max-width: 800px) { #test-screen { flex-direction: column; } .right-panel { width: 100%; } }
     </style>
 </head>
 <body>
@@ -107,11 +115,11 @@
         <div class="input-group">
             <label>Total Questions</label>
             <select id="t-num">
+                <option value="5">5 Questions (Quick Test)</option>
                 <option value="10">10 Questions</option>
                 <option value="25">25 Questions</option>
                 <option value="45">45 Questions</option>
                 <option value="90">90 Questions</option>
-                <option value="180">180 Questions (NEET)</option>
             </select>
         </div>
         
@@ -126,12 +134,11 @@
         <div class="left-panel">
             <div class="q-header">
                 <span id="q-no">Loading...</span>
-                <span id="bg-loading-badge" class="loading-badge"><i class="fas fa-spinner fa-spin"></i> Generating more questions...</span>
+                <span id="bg-loading-badge" class="loading-badge"><i class="fas fa-spinner fa-spin"></i> Generating more...</span>
             </div>
             <div class="q-body">
                 <div id="q-text"></div>
-                <!-- Div for the new Image URLs -->
-                <div id="q-diagram" style="display: none;"></div>
+                <div id="q-diagram" class="diagram-container"></div>
                 <div class="options" id="options-container"></div>
             </div>
             <div class="q-footer">
@@ -204,13 +211,14 @@
             totalRequiredQuestions = parseInt(document.getElementById('t-num').value);
             
             try {
-                // Fetch first 5 chunk
+                // Request FIRST 5 questions to start instantly
                 const initialCount = Math.min(5, totalRequiredQuestions);
                 const data = await fetchQuestionsChunk(initialCount);
                 
                 testSessionId = data.testSessionId;
                 questions = data.newQuestions;
                 
+                // Initialize response array
                 for(let i=0; i<totalRequiredQuestions; i++) {
                     userResponses.push({ questionId: null, selectedOptionIndex: null });
                 }
@@ -224,6 +232,7 @@
                 document.getElementById('setup-screen').classList.remove('active');
                 document.getElementById('test-screen').classList.add('active');
 
+                // Infinite background fetch loop
                 if (questions.length < totalRequiredQuestions) {
                     backgroundFetchLoop();
                 }
@@ -252,9 +261,10 @@
                         questions.push(q);
                         userResponses[questions.length - 1].questionId = q.questionId;
                     });
+                    
                     renderPalette(); 
                 } catch (e) {
-                    console.error("Background fetch failed, retrying...", e);
+                    console.error("Background fetch failed, retrying in 2s...");
                     await new Promise(r => setTimeout(r, 2000));
                 }
             }
@@ -273,7 +283,6 @@
                     btn.onclick = () => renderQuestion(i);
                 } else {
                     btn.className = 'p-btn pending';
-                    btn.title = "Generating in background...";
                 }
                 btn.innerText = i + 1;
                 grid.appendChild(btn);
@@ -286,16 +295,19 @@
             document.getElementById('q-no').innerText = `Question ${index + 1} of ${totalRequiredQuestions}`;
             document.getElementById('q-text').innerHTML = q.text;
             
-            // Render REAL Image URLs cleanly!
+            // Image Proxy Renderer
             const diagramDiv = document.getElementById('q-diagram');
             if (q.imageUrl && q.imageUrl.trim().startsWith('http')) {
-                diagramDiv.innerHTML = `<img src="${q.imageUrl}" onerror="this.style.display='none'">`;
-                diagramDiv.className = 'image-container'; // Uses CSS class defined above
-                diagramDiv.style.display = 'inline-block';
+                // Remove protocol for wsrv.nl to format correctly
+                const cleanUrl = q.imageUrl.replace(/^https?:\/\//, '');
+                // Bypass CORS and Hotlink Blocks using Image Proxy
+                const proxyUrl = `https://wsrv.nl/?url=${cleanUrl}&w=500&output=webp`;
+
+                diagramDiv.innerHTML = `<img src="${proxyUrl}" style="max-width: 100%; max-height: 250px; object-fit: contain; mix-blend-mode: multiply;" onerror="this.parentElement.style.display='none';">`;
+                diagramDiv.style.display = 'block';
             } else {
                 diagramDiv.innerHTML = '';
                 diagramDiv.style.display = 'none';
-                diagramDiv.className = '';
             }
 
             const optHtml = q.options.map((opt, i) => `
@@ -311,9 +323,13 @@
 
         function saveAndNext() {
             const selected = document.querySelector('input[name="q-option"]:checked');
-            if (selected) userResponses[currentQIndex].selectedOptionIndex = parseInt(selected.value);
+            if (selected) {
+                userResponses[currentQIndex].selectedOptionIndex = parseInt(selected.value);
+            }
             renderPalette();
-            if (currentQIndex < questions.length - 1) renderQuestion(currentQIndex + 1);
+            if (currentQIndex < questions.length - 1) {
+                renderQuestion(currentQIndex + 1);
+            }
         }
 
         function clearResponse() {
@@ -333,7 +349,6 @@
             }, 1000);
         }
 
-        // --- THE UPDATED SUBMIT TEST FUNCTION ---
         async function submitTest() {
             clearInterval(timerInterval);
             document.getElementById('test-screen').classList.remove('active');
@@ -359,14 +374,16 @@
                 const stat = r.isCorrect ? '<span class="correct-ans">Correct (+4)</span>' : 
                              (r.userAnswer === null ? '<span style="color:var(--text-muted)">Unattempted (0)</span>' : '<span class="wrong-ans">Incorrect (-1)</span>');
                 
-                // Show real image in results analysis!
-                let imgHtml = (r.imageUrl && r.imageUrl.trim().startsWith('http')) 
-                               ? `<div class="image-container"><img src="${r.imageUrl}" onerror="this.style.display='none'"></div>` : '';
+                let diagHtml = '';
+                if (r.imageUrl && r.imageUrl.trim().startsWith('http')) {
+                    const proxyUrl = `https://wsrv.nl/?url=${r.imageUrl.replace(/^https?:\/\//, '')}&w=400&output=webp`;
+                    diagHtml = `<div class="diagram-container" style="display:block; max-width:400px;"><img src="${proxyUrl}" style="max-width:100%; max-height:200px;" onerror="this.parentElement.style.display='none';"></div>`;
+                }
 
                 analysisHtml += `
                     <div class="analysis-card">
                         <div style="margin-bottom:10px;"><strong>Q${i+1}:</strong> ${r.questionText}</div>
-                        ${imgHtml}
+                        ${diagHtml}
                         <div style="font-size:0.9rem; margin-top: 10px;">
                             Status: ${stat}<br>
                             Your Answer: ${r.userAnswer !== null ? r.options[r.userAnswer] : 'None'}<br>
