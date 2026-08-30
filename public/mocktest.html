@@ -26,18 +26,21 @@
         .app-header { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid var(--glass-border); }
         .brand { font-weight: 600; font-size: 1.1rem; display: flex; gap: 10px; cursor: pointer; }
         
-        /* Screens */
         .screen { display: none; flex: 1; overflow-y: auto; padding: 20px; }
         .screen.active { display: flex; }
 
         /* Setup Screen */
         #setup-screen { flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .input-group { margin: 15px 0; display: flex; flex-direction: column; gap: 8px; text-align: left; width: 100%; max-width: 400px; }
+        .input-group { margin: 10px 0; display: flex; flex-direction: column; gap: 8px; text-align: left; width: 100%; max-width: 450px; }
         input, select { background: var(--bg-panel); border: 1px solid var(--glass-border); color: var(--text-main); padding: 12px; border-radius: 8px; font-family: 'Inter'; font-size: 1rem; }
         .btn-primary { background: var(--primary); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: 0.2s; }
         .btn-primary:hover { opacity: 0.9; }
 
-        /* Test Interface (NTA Style) */
+        /* SVG Diagram Styling */
+        .diagram-container { margin: 15px 0; max-width: 100%; text-align: center; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px dashed var(--glass-border); }
+        .diagram-container svg { max-height: 250px; max-width: 100%; fill: var(--text-main); stroke: var(--text-main); }
+        
+        /* Test Interface */
         #test-screen { flex-direction: row; gap: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
         .left-panel { flex: 1; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; }
         .right-panel { width: 300px; display: flex; flex-direction: column; gap: 20px; }
@@ -50,7 +53,7 @@
         .q-footer { padding: 20px; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; }
         
         .timer-box { background: var(--bg-panel); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; text-align: center; font-size: 1.5rem; font-family: 'JetBrains Mono'; color: var(--secondary); font-weight: bold; }
-        .palette-box { background: var(--bg-panel); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; flex: 1; }
+        .palette-box { background: var(--bg-panel); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; flex: 1; overflow-y: auto; max-height: 60vh;}
         .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
         .p-btn { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-main); font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .p-btn.answered { background: var(--success); color: white; border-color: var(--success); }
@@ -79,35 +82,65 @@
     <!-- SETUP SCREEN -->
     <div id="setup-screen" class="screen active">
         <h2>Generate AI Mock Test</h2>
-        <p style="color: var(--text-muted);">Gemini will generate a custom exam instantly.</p>
+        <p style="color: var(--text-muted);">Gemini generates exams with math equations and SVG diagrams.</p>
         
+        <div style="display: flex; gap: 10px; max-width: 450px; width: 100%;">
+            <div class="input-group" style="flex: 1;">
+                <label>Exam Type</label>
+                <select id="t-exam">
+                    <option>JEE Main</option>
+                    <option>NEET</option>
+                    <option>JEE Advanced</option>
+                </select>
+            </div>
+            <div class="input-group" style="flex: 1;">
+                <label>Syllabus Scope</label>
+                <select id="t-scope" onchange="toggleTopicInput()">
+                    <option value="Topic-wise">Topic-wise</option>
+                    <option value="Full Syllabus">Full Syllabus</option>
+                </select>
+            </div>
+        </div>
+
         <div class="input-group">
             <label>Subject</label>
             <select id="t-subject">
-                <option>Physics</option><option>Chemistry</option><option>Mathematics</option><option>Biology</option>
+                <option>Physics</option><option>Chemistry</option><option>Mathematics</option><option>Biology</option><option>All Subjects (Grand Test)</option>
             </select>
         </div>
-        <div class="input-group">
-            <label>Topic / Chapter</label>
-            <input type="text" id="t-topic" placeholder="e.g. Thermodynamics, Calculus..." value="Rotational Dynamics">
+        
+        <div class="input-group" id="topic-container">
+            <label>Specific Topic</label>
+            <input type="text" id="t-topic" placeholder="e.g. Rotational Dynamics, Genetics..." value="Rotational Dynamics">
         </div>
+
         <div class="input-group">
             <label>Number of Questions</label>
-            <select id="t-num"><option value="5">5 Questions</option><option value="10">10 Questions</option></select>
+            <select id="t-num">
+                <option value="10">10 Questions (Quick Practice)</option>
+                <option value="25">25 Questions (JEE Single Subject)</option>
+                <option value="45">45 Questions (NEET Single Subject)</option>
+                <option value="90">90 Questions (JEE Full Paper)</option>
+                <option value="180">180 Questions (NEET Full Paper)</option>
+            </select>
         </div>
         
-        <button class="btn-primary" id="start-btn" onclick="generateTest()" style="margin-top: 20px; width: 100%; max-width: 400px;">
-            <i class="fas fa-magic"></i> Generate & Start Test
+        <button class="btn-primary" id="start-btn" onclick="generateTest()" style="margin-top: 20px; width: 100%; max-width: 450px;">
+            <i class="fas fa-magic"></i> Generate Exam
         </button>
-        <p id="loading-msg" style="display:none; color: var(--secondary);">Generating test using Gemini... Please wait.</p>
+        <p id="loading-msg" style="display:none; color: var(--secondary); max-width: 450px;">
+            <i class="fas fa-spinner fa-spin"></i> Generating paper... (Note: 90 or 180 questions might take up to 30-60 seconds to generate).
+        </p>
     </div>
 
     <!-- TEST INTERFACE -->
     <div id="test-screen" class="screen">
         <div class="left-panel">
-            <div class="q-header" id="q-no">Question 1</div>
+            <div class="q-header" id="q-no">Loading...</div>
             <div class="q-body">
                 <div id="q-text"></div>
+                <!-- Div for SVG Diagram -->
+                <div id="q-diagram" class="diagram-container" style="display: none;"></div>
                 <div class="options" id="options-container"></div>
             </div>
             <div class="q-footer">
@@ -117,11 +150,11 @@
         </div>
         
         <div class="right-panel">
-            <div class="timer-box" id="timer">00:00</div>
+            <div class="timer-box" id="timer">00:00:00</div>
             <div class="palette-box">
                 <div style="font-weight: 600;">Question Palette</div>
                 <div class="palette-grid" id="palette"></div>
-                <button class="btn-primary" style="width: 100%; margin-top: 20px; background: var(--danger);" onclick="submitTest()">Submit Final Test</button>
+                <button class="btn-primary" style="width: 100%; margin-top: 20px; background: var(--danger);" onclick="submitTest()">Submit Test</button>
             </div>
         </div>
     </div>
@@ -138,21 +171,27 @@
     </div>
 
     <script>
+        function toggleTopicInput() {
+            const scope = document.getElementById('t-scope').value;
+            document.getElementById('topic-container').style.display = scope === 'Full Syllabus' ? 'none' : 'flex';
+        }
+
         let testSessionId = "";
         let questions = [];
-        let userResponses = []; // [{ questionId, selectedOptionIndex }]
+        let userResponses = []; 
         let currentQIndex = 0;
         let timeLeft = 0;
         let timerInterval;
 
-        // 1. Generate Test
         async function generateTest() {
             document.getElementById('start-btn').style.display = 'none';
             document.getElementById('loading-msg').style.display = 'block';
 
             const payload = {
+                examType: document.getElementById('t-exam').value,
+                syllabusType: document.getElementById('t-scope').value,
                 subject: document.getElementById('t-subject').value,
-                topic: document.getElementById('t-topic').value,
+                topic: document.getElementById('t-topic').value || "Full Syllabus",
                 numQuestions: parseInt(document.getElementById('t-num').value)
             };
 
@@ -169,7 +208,9 @@
                 testSessionId = data.testSessionId;
                 questions = data.questions;
                 userResponses = questions.map(q => ({ questionId: q.questionId, selectedOptionIndex: null }));
-                timeLeft = questions.length * 3 * 60; // 3 mins per question
+                
+                // Allow 2 minutes per question roughly
+                timeLeft = questions.length * 2 * 60; 
                 
                 startTimer();
                 renderPalette();
@@ -184,7 +225,6 @@
             }
         }
 
-        // 2. Render UI
         function renderPalette() {
             const grid = document.getElementById('palette');
             grid.innerHTML = '';
@@ -203,6 +243,16 @@
             document.getElementById('q-no').innerText = `Question ${index + 1} of ${questions.length}`;
             document.getElementById('q-text').innerHTML = q.text;
             
+            // Handle Diagram
+            const diagramDiv = document.getElementById('q-diagram');
+            if (q.diagramSvg && q.diagramSvg.trim().startsWith('<svg')) {
+                diagramDiv.innerHTML = q.diagramSvg;
+                diagramDiv.style.display = 'block';
+            } else {
+                diagramDiv.innerHTML = '';
+                diagramDiv.style.display = 'none';
+            }
+
             const optHtml = q.options.map((opt, i) => `
                 <label class="option-label">
                     <input type="radio" name="q-option" value="${i}" ${userResponses[index].selectedOptionIndex === i ? 'checked' : ''}>
@@ -229,13 +279,13 @@
             renderQuestion(currentQIndex);
         }
 
-        // 3. Timer & Submit
         function startTimer() {
             timerInterval = setInterval(() => {
                 if (timeLeft <= 0) { clearInterval(timerInterval); submitTest(); }
-                const m = Math.floor(timeLeft / 60);
+                const h = Math.floor(timeLeft / 3600);
+                const m = Math.floor((timeLeft % 3600) / 60);
                 const s = timeLeft % 60;
-                document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                document.getElementById('timer').innerText = `${h > 0 ? h + ':' : ''}${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
                 timeLeft--;
             }, 1000);
         }
