@@ -90,30 +90,40 @@ setInterval(() => {
     }
 }, 3600000);
 
-// A. Route to generate the test using Gemini
-app.post('/api/generate-test', async (req, res) => {
-    try {
-        const { examType, syllabusType, subject, topic, numQuestions } = req.body;
+// --- MOCK TEST ENGINE (CHUNKED & OPTIMIZED) ---
 
-        // Adjust prompt based on Full Syllabus or Topic-wise
+// Store tests in RAM. Structure: { "session_id": { questions: [], totalExpected: 90, expiresAt: ... } }
+const activeTestsCache = {}; 
+
+app.post('/api/generate-chunk', async (req, res) => {
+    try {
+        const { examType, syllabusType, subject, topic, numQuestionsToGenerate, sessionId, startIndex } = req.body;
+
         const scope = syllabusType === "Full Syllabus" 
-            ? `the entire full syllabus of ${subject} for ${examType}` 
+            ? `the full syllabus of ${subject} for ${examType}` 
             : `the specific topic '${topic}' in ${subject} for ${examType}`;
 
+        // Tapping into Gemini's native training + enforcing high-quality diagrams
         const prompt = `
-        You are an expert ${examType} paper setter. Generate a highly accurate mock test covering ${scope}.
-        Generate exactly ${numQuestions} questions.
+        You are an expert NTA paper setter for ${examType}. Tap into your deep knowledge of past year ${examType} papers.
+        Generate exactly ${numQuestionsToGenerate} highly accurate questions for ${scope}. (These are questions ${startIndex} onwards).
         
         CRITICAL RULES:
-        1. Output ONLY a raw JSON array. No markdown blocks, no conversational text.
+        1. Output ONLY a raw JSON array.
         2. Use LaTeX for math/physics/chemistry formulas (wrap inline in $...$, block in $$...$$).
-        3. If a question REQUIRES a diagram (e.g., physics circuit, chemical structure, biological diagram), generate clean, responsive raw SVG code and put it in the "diagramSvg" field. Ensure the SVG has a viewBox. If no diagram is needed, leave it as an empty string "".
+        3. DIAGRAMS: You MUST include diagrams for at least 2 out of these ${numQuestionsToGenerate} questions. 
+           - For Physics: Circuits, pulleys, optics, graphs.
+           - For Chemistry: Benzene rings, organic structures, graphs.
+           - For Biology: Cells, pathways.
+           - Output beautiful, well-proportioned raw SVG code in the "diagramSvg" field. 
+           - SVG RULES: Always include a viewBox (e.g., viewBox="0 0 300 300"). Use stroke="black", fill="transparent", and make text labels large (font-size="16"). 
+           - If no diagram is needed, leave as "".
         
-        Format each object in the array exactly like this:
+        Format each object exactly like this:
         {
           "questionId": "unique_string_id",
           "text": "Question text here",
-          "diagramSvg": "<svg>...</svg> or empty string",
+          "diagramSvg": "<svg viewBox='...'>...</svg>",
           "options": ["Option A", "Option B", "Option C", "Option D"],
           "correctOptionIndex": 0, 
           "solution": "Step-by-step detailed solution here"
@@ -124,22 +134,29 @@ app.post('/api/generate-test', async (req, res) => {
         
         const geminiResponse = await axios.post(API_URL, {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" } // Forces pure JSON
+            generationConfig: { responseMimeType: "application/json" }
         });
 
-        let responseText = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const responseText = geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!responseText) throw new Error("Empty response from AI");
 
         const generatedQuestions = JSON.parse(responseText);
-        const testSessionId = crypto.randomUUID();
+        
+        let currentSessionId = sessionId;
+        
+        // If this is the FIRST chunk, create the session
+        if (!currentSessionId || !activeTestsCache[currentSessionId]) {
+            currentSessionId = crypto.randomUUID();
+            activeTestsCache[currentSessionId] = {
+                questions: [],
+                expiresAt: Date.now() + (5 * 60 * 60 * 1000) // 5 hours expiry
+            };
+        }
 
-        // Save FULL test to server RAM (Expires in 4 hours for full tests)
-        activeTestsCache[testSessionId] = {
-            questions: generatedQuestions,
-            expiresAt: Date.now() + (4 * 60 * 60 * 1000)
-        };
+        // Append the new questions to the RAM cache securely
+        activeTestsCache[currentSessionId].questions.push(...generatedQuestions);
 
-        // Send a SECURE version to the frontend (Strip correct answers and solutions)
+        // Send a SECURE version to the frontend
         const secureQuestions = generatedQuestions.map(q => ({
             questionId: q.questionId,
             text: q.text,
@@ -147,39 +164,37 @@ app.post('/api/generate-test', async (req, res) => {
             options: q.options
         }));
 
-        res.json({ testSessionId, questions: secureQuestions });
+        res.json({ testSessionId: currentSessionId, newQuestions: secureQuestions });
 
     } catch (error) {
-        console.error("Backend Error generating test:", error.message);
-        res.status(500).json({ error: "AI failed to generate the test. It might have timed out generating a massive paper. Try generating 25 questions first!" });
+        console.error("Backend Error generating chunk:", error.message);
+        res.status(500).json({ error: "Failed to generate chunk." });
     }
 });
 
-// B. Route to evaluate the test
+// Route to evaluate the test
 app.post('/api/evaluate-test', (req, res) => {
     const { testSessionId, userResponses } = req.body;
     const testSession = activeTestsCache[testSessionId];
 
-    if (!testSession) {
-        return res.status(400).json({ error: "Test session expired or invalid." });
-    }
+    if (!testSession) return res.status(400).json({ error: "Test session expired or invalid." });
 
     let score = 0;
-    const totalMarks = testSession.questions.length * 4;
+    // Total marks based on how many questions were ACTUALLY generated and fetched
+    const totalMarks = testSession.questions.length * 4; 
     const detailedAnalysis = [];
 
-    // Grade it! +4 for correct, -1 for incorrect.
     testSession.questions.forEach((actualQuestion) => {
         const userResponse = userResponses.find(ur => ur.questionId === actualQuestion.questionId);
         const selectedOption = userResponse ? userResponse.selectedOptionIndex : null;
         
         const isCorrect = selectedOption === actualQuestion.correctOptionIndex;
-
         if (isCorrect) score += 4;
         else if (selectedOption !== null) score -= 1;
 
         detailedAnalysis.push({
             questionText: actualQuestion.text,
+            diagramSvg: actualQuestion.diagramSvg,
             options: actualQuestion.options,
             userAnswer: selectedOption,
             correctAnswer: actualQuestion.correctOptionIndex,
@@ -187,6 +202,10 @@ app.post('/api/evaluate-test', (req, res) => {
             solution: actualQuestion.solution
         });
     });
+
+    delete activeTestsCache[testSessionId]; // Clear RAM
+    res.json({ score, totalMarks, detailedAnalysis });
+});
 
     // Clean up memory
     delete activeTestsCache[testSessionId];
