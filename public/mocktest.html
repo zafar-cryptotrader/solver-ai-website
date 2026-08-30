@@ -35,15 +35,6 @@
         .btn-primary { background: var(--primary); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: 0.2s; }
         .btn-primary:hover { opacity: 0.9; }
 
-        /* THE DIAGRAM FIX: White background so black AI strokes are visible */
-        .diagram-container { 
-            margin: 15px 0; max-width: 100%; text-align: center; 
-            background: #ffffff; /* Forced White Background */
-            padding: 20px; border-radius: 8px; border: 2px solid var(--secondary); 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        .diagram-container svg { max-height: 280px; max-width: 100%; }
-        
         #test-screen { flex-direction: row; gap: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
         .left-panel { flex: 1; background: var(--bg-panel); border-radius: 12px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; }
         .right-panel { width: 300px; display: flex; flex-direction: column; gap: 20px; }
@@ -68,6 +59,9 @@
         .analysis-card { background: var(--bg-panel); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--glass-border); }
         .correct-ans { color: var(--success); font-weight: 600; }
         .wrong-ans { color: var(--danger); font-weight: 600; }
+        
+        .image-container { background: white; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); display: inline-block; margin: 15px 0; text-align: center; width: 100%; box-sizing: border-box; }
+        .image-container img { max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -136,7 +130,8 @@
             </div>
             <div class="q-body">
                 <div id="q-text"></div>
-                <div id="q-diagram" class="diagram-container" style="display: none;"></div>
+                <!-- Div for the new Image URLs -->
+                <div id="q-diagram" style="display: none;"></div>
                 <div class="options" id="options-container"></div>
             </div>
             <div class="q-footer">
@@ -209,18 +204,16 @@
             totalRequiredQuestions = parseInt(document.getElementById('t-num').value);
             
             try {
-                // Request FIRST 5 questions to start immediately
+                // Fetch first 5 chunk
                 const initialCount = Math.min(5, totalRequiredQuestions);
                 const data = await fetchQuestionsChunk(initialCount);
                 
                 testSessionId = data.testSessionId;
                 questions = data.newQuestions;
                 
-                // Initialize user responses for TOTAL questions (even pending ones)
                 for(let i=0; i<totalRequiredQuestions; i++) {
                     userResponses.push({ questionId: null, selectedOptionIndex: null });
                 }
-                // Assign IDs to the loaded ones
                 questions.forEach((q, i) => userResponses[i].questionId = q.questionId);
                 
                 timeLeft = totalRequiredQuestions * 2 * 60; // 2 mins per Q
@@ -231,7 +224,6 @@
                 document.getElementById('setup-screen').classList.remove('active');
                 document.getElementById('test-screen').classList.add('active');
 
-                // Start background fetching if more questions are needed
                 if (questions.length < totalRequiredQuestions) {
                     backgroundFetchLoop();
                 }
@@ -250,7 +242,6 @@
 
             while (questions.length < totalRequiredQuestions) {
                 try {
-                    // Fetch in chunks of 5
                     let needed = totalRequiredQuestions - questions.length;
                     let toFetch = Math.min(5, needed);
                     
@@ -261,11 +252,10 @@
                         questions.push(q);
                         userResponses[questions.length - 1].questionId = q.questionId;
                     });
-                    
-                    renderPalette(); // Update UI to show they are now unlocked
+                    renderPalette(); 
                 } catch (e) {
                     console.error("Background fetch failed, retrying...", e);
-                    await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
+                    await new Promise(r => setTimeout(r, 2000));
                 }
             }
             
@@ -278,42 +268,34 @@
             grid.innerHTML = '';
             for(let i = 0; i < totalRequiredQuestions; i++) {
                 const btn = document.createElement('button');
-                
                 if (i < questions.length) {
-                    // Question is loaded
                     btn.className = `p-btn ${userResponses[i].selectedOptionIndex !== null ? 'answered' : ''}`;
                     btn.onclick = () => renderQuestion(i);
                 } else {
-                    // Question is pending (fetching in background)
                     btn.className = 'p-btn pending';
                     btn.title = "Generating in background...";
                 }
-                
                 btn.innerText = i + 1;
                 grid.appendChild(btn);
             }
         }
 
-      function renderQuestion(index) {
+        function renderQuestion(index) {
             currentQIndex = index;
             const q = questions[index];
             document.getElementById('q-no').innerText = `Question ${index + 1} of ${totalRequiredQuestions}`;
             document.getElementById('q-text').innerHTML = q.text;
             
-            // Handle REAL Image URLs generated by Gemini
+            // Render REAL Image URLs cleanly!
             const diagramDiv = document.getElementById('q-diagram');
             if (q.imageUrl && q.imageUrl.trim().startsWith('http')) {
-                // If an image URL exists, display it beautifully
-                diagramDiv.innerHTML = `<img src="${q.imageUrl}" style="max-width: 100%; max-height: 280px; border-radius: 8px; object-fit: contain;" onerror="this.style.display='none'">`;
-                
-                // Style the container to look clean
-                diagramDiv.style.display = 'block';
-                diagramDiv.style.background = 'white'; // White background for transparent physics diagrams
-                diagramDiv.style.padding = '10px';
-                diagramDiv.style.border = '1px solid var(--glass-border)';
+                diagramDiv.innerHTML = `<img src="${q.imageUrl}" onerror="this.style.display='none'">`;
+                diagramDiv.className = 'image-container'; // Uses CSS class defined above
+                diagramDiv.style.display = 'inline-block';
             } else {
                 diagramDiv.innerHTML = '';
                 diagramDiv.style.display = 'none';
+                diagramDiv.className = '';
             }
 
             const optHtml = q.options.map((opt, i) => `
@@ -326,16 +308,12 @@
             
             MathJax.typesetPromise();
         }
+
         function saveAndNext() {
             const selected = document.querySelector('input[name="q-option"]:checked');
-            if (selected) {
-                userResponses[currentQIndex].selectedOptionIndex = parseInt(selected.value);
-            }
+            if (selected) userResponses[currentQIndex].selectedOptionIndex = parseInt(selected.value);
             renderPalette();
-            // Go to next if it is already loaded
-            if (currentQIndex < questions.length - 1) {
-                renderQuestion(currentQIndex + 1);
-            }
+            if (currentQIndex < questions.length - 1) renderQuestion(currentQIndex + 1);
         }
 
         function clearResponse() {
@@ -355,13 +333,13 @@
             }, 1000);
         }
 
+        // --- THE UPDATED SUBMIT TEST FUNCTION ---
         async function submitTest() {
             clearInterval(timerInterval);
             document.getElementById('test-screen').classList.remove('active');
             document.getElementById('result-screen').classList.add('active');
             document.getElementById('score-text').innerText = "Evaluating...";
 
-            // Only submit responses for questions that actually loaded
             const validResponses = userResponses.filter(ur => ur.questionId !== null);
 
             const res = await fetch('/api/evaluate-test', {
@@ -381,13 +359,14 @@
                 const stat = r.isCorrect ? '<span class="correct-ans">Correct (+4)</span>' : 
                              (r.userAnswer === null ? '<span style="color:var(--text-muted)">Unattempted (0)</span>' : '<span class="wrong-ans">Incorrect (-1)</span>');
                 
-                let diagHtml = (r.diagramSvg && r.diagramSvg.startsWith('<svg')) 
-                               ? `<div class="diagram-container" style="max-width:300px;">${r.diagramSvg}</div>` : '';
+                // Show real image in results analysis!
+                let imgHtml = (r.imageUrl && r.imageUrl.trim().startsWith('http')) 
+                               ? `<div class="image-container"><img src="${r.imageUrl}" onerror="this.style.display='none'"></div>` : '';
 
                 analysisHtml += `
                     <div class="analysis-card">
                         <div style="margin-bottom:10px;"><strong>Q${i+1}:</strong> ${r.questionText}</div>
-                        ${diagHtml}
+                        ${imgHtml}
                         <div style="font-size:0.9rem; margin-top: 10px;">
                             Status: ${stat}<br>
                             Your Answer: ${r.userAnswer !== null ? r.options[r.userAnswer] : 'None'}<br>
